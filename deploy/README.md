@@ -1,5 +1,10 @@
 # AIStudio365 shop deployment
 
+> **Retired from the domain on 2026-11-05.** https://aistudio365.duckdns.org now serves the new shop
+> (`shop/`, see `shop/deploy/README.md`). Dujiao-Next keeps running on `127.0.0.1:18081` so the
+> domain can be switched back with `bash /opt/aistudio365-shop/src/deploy/nginx-switch.sh dujiao`
+> until it is removed.
+
 Dujiao-Next (SQLite + Redis, Docker Compose) on `root@23.246.154.136`, served at
 https://aistudio365.duckdns.org through the host nginx with a Let's Encrypt certificate.
 
