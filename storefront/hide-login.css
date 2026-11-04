@@ -1,0 +1,4 @@
+/* Hide every link to the member login page (navbar 登录, mobile 我的, checkout 登录会员购买). */
+a[href="/auth/login"],a[href^="/auth/login?"]{display:none!important}
+/* Checkout 购买方式 button row (游客购买 + 登录会员购买); guest checkout is the default mode. */
+div.flex-wrap:has(> a[href="/auth/login"]){display:none!important}

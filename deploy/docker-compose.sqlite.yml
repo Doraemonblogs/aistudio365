@@ -1,0 +1,56 @@
+# Official Dujiao-Next SQLite stack (app + Redis), with a fixed network subnet so
+# config.yml can trust the Docker gateway as the reverse proxy address.
+name: dujiao-next
+
+services:
+  redis:
+    image: redis:7-alpine
+    container_name: dujiaonext-redis
+    restart: unless-stopped
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+    command: ["redis-server", "--dir", "/data", "--appendonly", "yes", "--requirepass", "${REDIS_PASSWORD}"]
+    volumes:
+      - ./data/redis:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+    networks:
+      - dujiao-net
+
+  dujiao-next:
+    image: dujiaonext/dujiao-next:${TAG}
+    container_name: dujiao-next
+    restart: unless-stopped
+    environment:
+      TZ: ${TZ}
+      DJ_DEFAULT_ADMIN_USERNAME: ${DJ_DEFAULT_ADMIN_USERNAME}
+      DJ_DEFAULT_ADMIN_PASSWORD: ${DJ_DEFAULT_ADMIN_PASSWORD}
+    # Only reachable from the host itself; nginx proxies the public domain to it.
+    ports:
+      - "127.0.0.1:${APP_PORT}:8080"
+    volumes:
+      - ./config/config.yml:/app/config.yml:ro
+      - ./data/db:/app/db
+      - ./data/uploads:/app/uploads
+      - ./data/logs:/app/logs
+    depends_on:
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+    networks:
+      - dujiao-net
+
+networks:
+  dujiao-net:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.30.65.0/24
+          gateway: 172.30.65.1

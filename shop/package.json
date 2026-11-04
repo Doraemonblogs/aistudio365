@@ -1,0 +1,31 @@
+{
+  "name": "aistudio365-shop",
+  "version": "0.1.0",
+  "private": true,
+  "description": "AIStudio365 shop: pick a product, pay with a personal QR code, contact customer service.",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "tsx watch server/src/index.ts",
+    "build:server": "tsc -p tsconfig.build.json",
+    "start": "node server/dist/index.js",
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run",
+    "import:dujiao": "tsx scripts/import-dujiao.ts",
+    "products:list": "tsx scripts/list-products.ts",
+    "admin:password": "tsx scripts/set-admin-password.ts"
+  },
+  "dependencies": {
+    "better-sqlite3": "^13.0.3",
+    "fastify": "^5.12.8"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^9.6.0",
+    "@types/node": "^26.6.6",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2",
+    "vitest": "^5.1.0"
+  }
+}

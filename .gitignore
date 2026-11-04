@@ -1,0 +1,15 @@
+node_modules/
+dist/
+*.log
+.env
+
+# Runtime data: SQLite database, uploads, import exports
+shop/data/
+*.db
+*.db-wal
+*.db-shm
+
+# Personal payment QR codes are shown on the site but kept out of git
+cashier/qr/*.png
+cashier/qr/*.jpg
+cashier/qr/*.webp
