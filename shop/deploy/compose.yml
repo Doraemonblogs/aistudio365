@@ -1,0 +1,20 @@
+# The shop on the server. Source lives in /opt/aistudio365-shop/src (this file is src/deploy/compose.yml),
+# data in /opt/aistudio365-shop/data. Reached only through the host nginx.
+name: aistudio365-shop
+
+services:
+  shop:
+    build: ..
+    image: aistudio365-shop:latest
+    container_name: aistudio365-shop
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:18082:3000"
+    volumes:
+      - /opt/aistudio365-shop/data:/app/data
+    mem_limit: 384m
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"

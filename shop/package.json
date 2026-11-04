@@ -19,7 +19,7 @@
     "test": "vitest run",
     "import:dujiao": "tsx scripts/import-dujiao.ts",
     "products:list": "tsx scripts/list-products.ts",
-    "admin:password": "tsx scripts/set-admin-password.ts"
+    "admin:password": "tsx server/src/cli/admin-password.ts"
   },
   "dependencies": {
     "@fastify/cookie": "^11.1.5",

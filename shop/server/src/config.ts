@@ -6,6 +6,9 @@ export interface Config {
   dataDir: string;
   dbFile: string;
   uploadsDir: string;
+  /** Daily database copies; the newest `backupKeep` are kept. */
+  backupDir: string;
+  backupKeep: number;
   webDir: string;
   /** false only for local development over plain HTTP. */
   cookieSecure: boolean;
@@ -20,6 +23,8 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     dataDir,
     dbFile: path.join(dataDir, 'shop.db'),
     uploadsDir: path.join(dataDir, 'uploads'),
+    backupDir: path.join(dataDir, 'backups'),
+    backupKeep: Math.max(1, Number(env.BACKUP_KEEP ?? 14) || 14),
     webDir: path.resolve(env.WEB_DIR ?? 'web/dist'),
     cookieSecure: env.COOKIE_SECURE !== 'false',
   };

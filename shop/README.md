@@ -19,7 +19,9 @@ Node.js 24 + TypeScript 6 + Fastify + SQLite (better-sqlite3); Vue 3 + Vite + Ta
 | `server/src/shop/` | Product stock and order rules (holding stock, expiry, order numbers), sales stats |
 | `web/` | Buyer pages: home, product, cashier, order detail, order lookup |
 | `web/src/admin/` | Admin pages at `/admin`: orders, products and cards, stats, settings, password |
-| `scripts/` | Dujiao-Next export/import, product listing, admin password |
+| `server/src/cli/` | Admin password reset; compiled into the image, so it also runs in production |
+| `scripts/` | Dujiao-Next export/import, product listing |
+| `Dockerfile`, `deploy/` | Production image, compose file, deploy and nginx switch scripts; see `deploy/README.md` |
 | `scripts/dev/` | `sync.cmd` copies the source to the server; `run.sh` runs a command there in Docker |
 | `tests/` | Vitest tests |
 | `data/` (not in git) | `shop.db`, `uploads/`, import exports |
