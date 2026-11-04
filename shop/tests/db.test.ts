@@ -1,6 +1,7 @@
 import Database from 'better-sqlite3';
 import { describe, expect, it } from 'vitest';
 import { migrate } from '../server/src/db/index.js';
+import { migrations } from '../server/src/db/schema.js';
 import { hashPassword, randomPassword, verifyPassword } from '../server/src/passwords.js';
 import { DEFAULT_SETTINGS, getSettings, updateSettings } from '../server/src/settings.js';
 
@@ -13,11 +14,13 @@ const freshDb = () => {
 describe('schema', () => {
   it('creates every table and is safe to run twice', () => {
     const db = freshDb();
-    expect(migrate(db)).toBe(1);
+    expect(migrate(db)).toBe(migrations.length);
     const tables = (db.prepare("SELECT name FROM sqlite_master WHERE type = 'table'").all() as { name: string }[]).map(
       (row) => row.name,
     );
-    expect(tables).toEqual(expect.arrayContaining(['categories', 'products', 'orders', 'cards', 'settings', 'admins']));
+    expect(tables).toEqual(
+      expect.arrayContaining(['categories', 'products', 'orders', 'cards', 'settings', 'admins', 'sessions']),
+    );
   });
 
   it('rejects invalid values', () => {

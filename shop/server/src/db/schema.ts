@@ -84,4 +84,14 @@ export const migrations: readonly string[] = [
     created_at     TEXT NOT NULL
   );
   `,
+  // v2: admin login sessions. Only a SHA-256 of each session token is stored.
+  `
+  CREATE TABLE sessions (
+    token_hash  TEXT PRIMARY KEY,
+    admin_id    INTEGER NOT NULL REFERENCES admins(id) ON DELETE CASCADE,
+    created_at  TEXT NOT NULL,
+    expires_at  TEXT NOT NULL
+  );
+  CREATE INDEX idx_sessions_expires ON sessions (expires_at);
+  `,
 ];

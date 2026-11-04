@@ -1,25 +1,28 @@
 import { buildApp } from './app.js';
+import { purgeExpiredSessions } from './auth.js';
 import { loadConfig } from './config.js';
 import { openDb } from './db/index.js';
 import { expireOrders } from './shop/orders.js';
 
 const config = loadConfig();
 const db = openDb(config.dbFile);
-const app = buildApp(db, { uploadsDir: config.uploadsDir, webDir: config.webDir });
+const app = buildApp(db, { uploadsDir: config.uploadsDir, webDir: config.webDir, cookieSecure: config.cookieSecure });
 
-// Cancel unpaid orders past their deadline once a minute (reads also do it on demand).
-const expiry = setInterval(() => {
+// Once a minute: cancel unpaid orders past their deadline (reads also do it on demand) and
+// drop expired admin sessions.
+const housekeeping = setInterval(() => {
   try {
     const cancelled = expireOrders(db);
     if (cancelled > 0) app.log.info({ cancelled }, 'expired unpaid orders');
+    purgeExpiredSessions(db);
   } catch (error) {
-    app.log.error(error, 'order expiry failed');
+    app.log.error(error, 'housekeeping failed');
   }
 }, 60_000);
-expiry.unref();
+housekeeping.unref();
 
 const shutdown = async () => {
-  clearInterval(expiry);
+  clearInterval(housekeeping);
   await app.close();
   db.close();
   process.exit(0);

@@ -1,8 +1,11 @@
 import fs from 'node:fs';
+import fastifyCookie from '@fastify/cookie';
+import fastifyMultipart from '@fastify/multipart';
 import fastifyStatic from '@fastify/static';
 import Fastify, { type FastifyError, type FastifyInstance } from 'fastify';
 import type { DB } from './db/index.js';
 import { AppError } from './errors.js';
+import { registerAdminRoutes } from './routes/admin.js';
 import { registerPublicRoutes } from './routes/public.js';
 
 export interface AppOptions {
@@ -10,6 +13,8 @@ export interface AppOptions {
   /** Built frontend (web/dist); skipped when it doesn't exist, e.g. in API tests. */
   webDir?: string;
   logger?: boolean;
+  /** Send the admin session cookie only over HTTPS (default true). */
+  cookieSecure?: boolean;
 }
 
 export function buildApp(db: DB, options: AppOptions): FastifyInstance {
@@ -35,7 +40,10 @@ export function buildApp(db: DB, options: AppOptions): FastifyInstance {
     return { ok: true, products: row.products };
   });
 
+  app.register(fastifyCookie);
+  app.register(fastifyMultipart);
   registerPublicRoutes(app, db);
+  registerAdminRoutes(app, db, { uploadsDir: options.uploadsDir, cookieSecure: options.cookieSecure ?? true });
 
   fs.mkdirSync(options.uploadsDir, { recursive: true });
   app.register(fastifyStatic, {

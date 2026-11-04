@@ -120,21 +120,90 @@ function releaseStock(db: DB, productId: number | null, quantity: number): void 
   ).run({ id: productId, qty: quantity });
 }
 
+/** Cancels one pending order and releases its stock; false when it was not pending. */
+function cancelIfPending(db: DB, order: Pick<OrderRow, 'id' | 'product_id' | 'quantity'>, now: string): boolean {
+  const changed = db
+    .prepare("UPDATE orders SET status = 'cancelled', cancelled_at = @now WHERE id = @id AND status = 'pending'")
+    .run({ id: order.id, now }).changes;
+  if (changed === 1) releaseStock(db, order.product_id, order.quantity);
+  return changed === 1;
+}
+
 /** Cancels every pending order past its deadline and releases its stock; returns how many. */
 export function expireOrders(db: DB, now = nowIso()): number {
   const expired = db
     .prepare("SELECT id, product_id, quantity FROM orders WHERE status = 'pending' AND expire_at <= ?")
     .all(now) as Pick<OrderRow, 'id' | 'product_id' | 'quantity'>[];
   if (expired.length === 0) return 0;
-  const cancel = db.prepare(
-    "UPDATE orders SET status = 'cancelled', cancelled_at = @now WHERE id = @id AND status = 'pending'",
-  );
+  let count = 0;
   db.transaction(() => {
-    for (const order of expired) {
-      if (cancel.run({ id: order.id, now }).changes === 1) releaseStock(db, order.product_id, order.quantity);
-    }
+    for (const order of expired) if (cancelIfPending(db, order, now)) count++;
   })();
-  return expired.length;
+  return count;
+}
+
+function requireOrder(db: DB, id: number): OrderRow {
+  const order = getOrder(db, id);
+  if (!order) throw new AppError(404, '订单不存在');
+  return order;
+}
+
+/**
+ * Customer service saw the money arrive: the order becomes paid and its cards are handed out.
+ * Fixed-content products deliver their text; card-pool products take that many unsold cards.
+ * Works on cancelled orders too (the buyer paid after the deadline); their released stock is
+ * taken again, never below zero.
+ */
+export function confirmPayment(db: DB, id: number, now = nowIso()): OrderRow {
+  return db.transaction(() => {
+    const order = requireOrder(db, id);
+    if (order.status !== 'pending' && order.status !== 'cancelled') {
+      throw new AppError(409, '只有待付款或已取消的订单可以确认收款');
+    }
+    const product = order.product_id === null ? undefined : getProduct(db, order.product_id);
+    let cards: string[] = [];
+    if (product?.card_mode === 'pool') {
+      const rows = db
+        .prepare("SELECT id, content FROM cards WHERE product_id = ? AND status = 'available' ORDER BY id LIMIT ?")
+        .all(product.id, order.quantity) as { id: number; content: string }[];
+      if (rows.length < order.quantity) {
+        throw new AppError(409, `卡密不够：这单需要 ${order.quantity} 张，卡密库只剩 ${rows.length} 张，请先补充卡密`);
+      }
+      const sell = db.prepare("UPDATE cards SET status = 'sold', order_id = ?, sold_at = ? WHERE id = ?");
+      for (const row of rows) sell.run(order.id, now, row.id);
+      cards = rows.map((row) => row.content);
+    } else if (product) {
+      if (product.card_text.trim()) cards = [product.card_text.trim()];
+      if (order.status === 'cancelled' && product.stock >= 0) {
+        db.prepare('UPDATE products SET stock = MAX(stock - ?, 0) WHERE id = ?').run(order.quantity, product.id);
+      }
+    }
+    db.prepare(
+      "UPDATE orders SET status = 'paid', paid_at = ?, cancelled_at = NULL, cards = ? WHERE id = ?",
+    ).run(now, JSON.stringify(cards), order.id);
+    return getOrder(db, order.id)!;
+  })();
+}
+
+export function completeOrder(db: DB, id: number, now = nowIso()): OrderRow {
+  const order = requireOrder(db, id);
+  if (order.status !== 'paid') throw new AppError(409, '只有已付款的订单可以标记完成');
+  db.prepare("UPDATE orders SET status = 'completed', completed_at = ? WHERE id = ?").run(now, id);
+  return getOrder(db, id)!;
+}
+
+export function cancelOrder(db: DB, id: number, now = nowIso()): OrderRow {
+  return db.transaction(() => {
+    const order = requireOrder(db, id);
+    if (!cancelIfPending(db, order, now)) throw new AppError(409, '只有待付款的订单可以取消');
+    return getOrder(db, id)!;
+  })();
+}
+
+export function setOrderNote(db: DB, id: number, note: string): OrderRow {
+  requireOrder(db, id);
+  db.prepare('UPDATE orders SET admin_note = ? WHERE id = ?').run(note, id);
+  return getOrder(db, id)!;
 }
 
 export function findBuyerOrder(db: DB, orderNo: string, phone: string): OrderRow | undefined {

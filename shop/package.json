@@ -22,6 +22,8 @@
     "admin:password": "tsx scripts/set-admin-password.ts"
   },
   "dependencies": {
+    "@fastify/cookie": "^11.1.5",
+    "@fastify/multipart": "^10.1.7",
     "@fastify/static": "^10.1.9",
     "better-sqlite3": "^13.0.3",
     "dompurify": "^3.4.17",

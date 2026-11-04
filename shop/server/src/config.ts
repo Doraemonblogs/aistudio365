@@ -7,6 +7,8 @@ export interface Config {
   dbFile: string;
   uploadsDir: string;
   webDir: string;
+  /** false only for local development over plain HTTP. */
+  cookieSecure: boolean;
 }
 
 /** Runtime settings from the environment; all data lives under DATA_DIR (default ./data). */
@@ -19,5 +21,6 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     dbFile: path.join(dataDir, 'shop.db'),
     uploadsDir: path.join(dataDir, 'uploads'),
     webDir: path.resolve(env.WEB_DIR ?? 'web/dist'),
+    cookieSecure: env.COOKIE_SECURE !== 'false',
   };
 }

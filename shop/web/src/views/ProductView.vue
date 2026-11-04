@@ -150,7 +150,7 @@ async function submit() {
                 maxlength="16"
                 placeholder="用于查询订单，客服也会核对"
                 class="input"
-                :class="{ '!border-rose-400 focus:!ring-rose-100': phoneInvalid }"
+                :class="{ 'border-rose-400 focus:border-rose-400 focus:ring-rose-100': phoneInvalid }"
                 @blur="phoneTouched = true"
               />
               <p v-if="phoneInvalid" class="mt-1.5 text-xs text-rose-600">请输入正确的 11 位手机号</p>

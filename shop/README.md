@@ -14,8 +14,11 @@ Node.js 24 + TypeScript 6 + Fastify + SQLite (better-sqlite3); Vue 3 + Vite + Ta
 | --- | --- |
 | `server/src/` | HTTP server, database schema and migrations, settings, password hashing |
 | `server/src/routes/public.ts` | Buyer API: shop info, products, place an order, look up orders |
-| `server/src/shop/` | Product stock and order rules (holding stock, expiry, order numbers) |
+| `server/src/routes/admin.ts` | Admin API under `/api/admin`: login, products, cards, orders, stats, settings, uploads |
+| `server/src/auth.ts` | Admin sessions (cookie `shop_admin`, 7 days, sliding) and the login lockout |
+| `server/src/shop/` | Product stock and order rules (holding stock, expiry, order numbers), sales stats |
 | `web/` | Buyer pages: home, product, cashier, order detail, order lookup |
+| `web/src/admin/` | Admin pages at `/admin`: orders, products and cards, stats, settings, password |
 | `scripts/` | Dujiao-Next export/import, product listing, admin password |
 | `scripts/dev/` | `sync.cmd` copies the source to the server; `run.sh` runs a command there in Docker |
 | `tests/` | Vitest tests |
@@ -37,7 +40,8 @@ the server, copy `package.json` and `package-lock.json` back, or the next sync r
 A dev instance runs on the server as the `aistudio365-shop-dev` container, bound to
 `127.0.0.1:18090` only. The `shop-dev` entry in `.claude/launch.json` opens an SSH tunnel to it so
 it can be viewed at http://localhost:18090. Rebuild the frontend (`npm run build:web`) to see page
-changes; the server reloads on its own.
+changes; the server reloads on its own. The container runs with `COOKIE_SECURE=false` because the
+tunnel is plain HTTP; its admin login is in `data/dev-admin.txt` on the server (not in git).
 
 Useful commands (inside that container):
 
