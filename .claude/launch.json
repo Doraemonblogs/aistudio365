@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "shop-dev",
+      "runtimeExecutable": "ssh",
+      "runtimeArgs": ["-N", "-o", "BatchMode=yes", "-o", "ExitOnForwardFailure=yes", "-L", "18090:127.0.0.1:18090", "root@23.246.154.136"],
+      "port": 18090
+    }
+  ]
+}

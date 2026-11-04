@@ -5,13 +5,17 @@ or Alipay QR code and contact customer service; the admin manages products, conf
 and sees sales. Design: the development doc
 (https://claude.ai/artifact/RjSvQ4B2Q7egt5QpXMg4r7).
 
-Node.js 24 + TypeScript + Fastify + SQLite (better-sqlite3). Vue 3 frontend comes in phase 2.
+Node.js 24 + TypeScript 6 + Fastify + SQLite (better-sqlite3); Vue 3 + Vite + Tailwind CSS 4.
+(TypeScript stays on 6 because vue-tsc does not support the TypeScript 7 native compiler yet.)
 
 ## Layout
 
 | Path | What |
 | --- | --- |
 | `server/src/` | HTTP server, database schema and migrations, settings, password hashing |
+| `server/src/routes/public.ts` | Buyer API: shop info, products, place an order, look up orders |
+| `server/src/shop/` | Product stock and order rules (holding stock, expiry, order numbers) |
+| `web/` | Buyer pages: home, product, cashier, order detail, order lookup |
 | `scripts/` | Dujiao-Next export/import, product listing, admin password |
 | `scripts/dev/` | `sync.cmd` copies the source to the server; `run.sh` runs a command there in Docker |
 | `tests/` | Vitest tests |
@@ -24,14 +28,23 @@ container, with the source in `/root/aistudio365-shop-dev` and `node_modules` in
 
 ```powershell
 cmd /c shop\scripts\dev\sync.cmd
-ssh root@23.246.154.136 "cd /root/aistudio365-shop-dev && bash scripts/dev/run.sh npm test"
+ssh root@23.246.154.136 "bash /root/aistudio365-shop-dev/scripts/dev/check.sh"
 ```
+
+`check.sh` runs both type checks, the tests and the frontend build. After adding a dependency on
+the server, copy `package.json` and `package-lock.json` back, or the next sync reverts them.
+
+A dev instance runs on the server as the `aistudio365-shop-dev` container, bound to
+`127.0.0.1:18090` only. The `shop-dev` entry in `.claude/launch.json` opens an SSH tunnel to it so
+it can be viewed at http://localhost:18090. Rebuild the frontend (`npm run build:web`) to see page
+changes; the server reloads on its own.
 
 Useful commands (inside that container):
 
 | Command | Does |
 | --- | --- |
-| `npm run typecheck` / `npm test` | Type check / run tests |
+| `npm run typecheck` / `npm run typecheck:web` / `npm test` | Type check server / frontend, run tests |
+| `npm run build` | Build the frontend into `web/dist` and the server into `server/dist` |
 | `npm run dev` | Start the server on port 3000 with reload |
 | `npm run import:dujiao -- data/import [--replace]` | Import the catalog exported by `scripts/export-dujiao.py` |
 | `npm run products:list` | Print products and shop settings |

@@ -1,0 +1,62 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Segoe UI",
+    Roboto, sans-serif;
+  --color-wechat: #07c160;
+  --color-alipay: #1677ff;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  @apply bg-slate-50 text-slate-800 antialiased;
+}
+
+@layer components {
+  .card {
+    @apply rounded-2xl bg-white ring-1 ring-slate-200/80;
+  }
+  .input {
+    @apply h-11 w-full rounded-xl border border-slate-300 bg-white px-3.5 text-[15px] text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100;
+  }
+  .btn-primary {
+    @apply inline-flex h-11 items-center justify-center rounded-xl bg-blue-600 px-5 text-[15px] font-semibold text-white transition hover:bg-blue-700 active:bg-blue-800 disabled:cursor-not-allowed disabled:bg-slate-300;
+  }
+  .btn-secondary {
+    @apply inline-flex h-11 items-center justify-center rounded-xl bg-white px-5 text-[15px] font-semibold text-slate-700 ring-1 ring-inset ring-slate-300 transition hover:bg-slate-50;
+  }
+  .label {
+    @apply mb-1.5 block text-sm font-medium text-slate-700;
+  }
+}
+
+/* Rich text written in the admin: product details, the shop notice, usage instructions.
+   Kept in the components layer so utility classes on the element can still override it. */
+@layer components {
+  .rich {
+    @apply text-[15px] leading-7 break-words text-slate-700;
+  }
+  .rich p {
+    @apply my-1.5;
+  }
+  .rich a {
+    @apply text-blue-600 underline underline-offset-2;
+  }
+  .rich img {
+    @apply my-3 max-w-full rounded-lg;
+  }
+  .rich ul {
+    @apply my-2 list-disc pl-5;
+  }
+  .rich ol {
+    @apply my-2 list-decimal pl-5;
+  }
+  .rich strong,
+  .rich b {
+    @apply font-semibold text-slate-900;
+  }
+}

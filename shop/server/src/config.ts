@@ -6,6 +6,7 @@ export interface Config {
   dataDir: string;
   dbFile: string;
   uploadsDir: string;
+  webDir: string;
 }
 
 /** Runtime settings from the environment; all data lives under DATA_DIR (default ./data). */
@@ -17,5 +18,6 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     dataDir,
     dbFile: path.join(dataDir, 'shop.db'),
     uploadsDir: path.join(dataDir, 'uploads'),
+    webDir: path.resolve(env.WEB_DIR ?? 'web/dist'),
   };
 }
