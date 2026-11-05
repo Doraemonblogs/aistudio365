@@ -306,23 +306,18 @@ onBeforeUnmount(() => {
 
               <div v-if="!soldOut">
                 <label for="buy-coupon" class="label">优惠券 <span class="text-stone-400">选填</span></label>
-                <div class="relative">
-                  <input
-                    id="buy-coupon"
-                    v-model="couponInput"
-                    class="input bg-stone-50 pr-28 font-mono uppercase placeholder:font-sans placeholder:normal-case focus:bg-white"
-                    maxlength="40"
-                    autocomplete="off"
-                    autocapitalize="characters"
-                    spellcheck="false"
-                    placeholder="有券码就填，没有不用填"
-                    @blur="checkCoupon"
-                  />
-                  <span class="pointer-events-none absolute inset-y-0 right-4 flex items-center text-sm">
-                    <span v-if="discount" class="font-medium text-accent">已减 ¥{{ yuanShort(discount) }}</span>
-                    <span v-else-if="checkingCoupon" class="text-stone-400">验证中…</span>
-                  </span>
-                </div>
+                <!-- A code that fits just lowers the total below; the box itself stays plain. -->
+                <input
+                  id="buy-coupon"
+                  v-model="couponInput"
+                  class="input bg-stone-50 font-mono uppercase placeholder:font-sans placeholder:normal-case focus:bg-white"
+                  maxlength="40"
+                  autocomplete="off"
+                  autocapitalize="characters"
+                  spellcheck="false"
+                  placeholder="请输入优惠券码"
+                  @blur="checkCoupon"
+                />
                 <p v-if="couponError" class="mt-1.5 text-xs text-rose-600" role="alert">{{ couponError }}</p>
                 <div v-else-if="usableMine.length && !typedCode" class="mt-2 flex flex-wrap items-center gap-2 text-xs">
                   <span class="text-stone-400">你有可用的券</span>
