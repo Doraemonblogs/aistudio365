@@ -1,13 +1,16 @@
 <script setup lang="ts">
+import { useRoute } from 'vue-router';
 import type { ProductSummary } from '../api';
 import PriceTag from './PriceTag.vue';
 
 defineProps<{ product: ProductSummary }>();
+// The dialog opens over the list; keeping the query keeps the chosen category behind it.
+const route = useRoute();
 </script>
 
 <template>
   <!-- No frame around the card: the picture carries it, name and price sit on the page. -->
-  <RouterLink :to="`/p/${product.id}`" class="group block outline-none">
+  <RouterLink :to="{ path: `/p/${product.id}`, query: route.query }" class="group block outline-none">
     <div class="relative aspect-square overflow-hidden rounded-3xl bg-white shadow-soft transition duration-300 group-hover:-translate-y-1 group-focus-visible:ring-4 group-focus-visible:ring-stone-300">
       <img
         v-if="product.image"

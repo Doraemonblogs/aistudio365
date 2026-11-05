@@ -88,5 +88,8 @@ onMounted(async () => {
         <ProductCard v-for="product in visible" :key="product.id" :product="product" />
       </div>
     </section>
+
+    <!-- The product dialog (/p/:id) -->
+    <RouterView />
   </div>
 </template>

@@ -4,8 +4,12 @@ import { ensureAdmin } from './admin/state';
 export const router = createRouter({
   history: createWebHistory(),
   routes: [
-    { path: '/', component: () => import('./views/HomeView.vue') },
-    { path: '/p/:id(\\d+)', component: () => import('./views/ProductView.vue'), props: true },
+    {
+      path: '/',
+      component: () => import('./views/HomeView.vue'),
+      // A product opens as a dialog over the list, so the list stays where the buyer left it.
+      children: [{ path: 'p/:id(\\d+)', component: () => import('./views/ProductDialog.vue'), props: true }],
+    },
     { path: '/pay/:orderNo', component: () => import('./views/PayView.vue'), props: true },
     { path: '/order/:orderNo', component: () => import('./views/OrderView.vue'), props: true },
     { path: '/orders', component: () => import('./views/OrdersView.vue') },
@@ -30,7 +34,12 @@ export const router = createRouter({
 
     { path: '/:pathMatch(.*)*', component: () => import('./views/NotFoundView.vue') },
   ],
-  scrollBehavior: (_to, _from, saved) => saved ?? { top: 0 },
+  scrollBehavior: (to, from, saved) => {
+    // Opening or closing a product, or switching category, keeps the list where it was.
+    const onHome = (r: typeof to) => r.matched[0]?.path === '/';
+    if (onHome(to) && onHome(from)) return false;
+    return saved ?? { top: 0 };
+  },
 });
 
 /** Every admin page except the login needs a signed-in session. */

@@ -31,7 +31,7 @@ Node.js 24 + TypeScript 6 + Fastify + SQLite (better-sqlite3); Vue 3 + Vite + Ta
 | `server/src/routes/admin.ts` | Admin API under `/api/admin`: login, products, cards, orders (and batch), coupons, stats, settings, uploads |
 | `server/src/auth.ts` | Admin sessions (cookie `shop_admin`, 7 days, sliding) and the login lockout |
 | `server/src/shop/` | Product stock and order rules (holding stock, expiry, order numbers), coupons, sales stats |
-| `web/` | Buyer pages: home, product, cashier, order detail, order lookup |
+| `web/` | Buyer pages: home (a product opens there as a dialog, `/p/:id`), cashier, order detail, order lookup |
 | `web/src/admin/` | Admin pages at `/admin`: orders, products and cards, marketing (coupons), stats, settings, password |
 | `server/src/cli/` | Admin password reset; compiled into the image, so it also runs in production |
 | `scripts/` | Dujiao-Next export/import, product listing |

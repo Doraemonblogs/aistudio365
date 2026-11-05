@@ -16,6 +16,8 @@
 html {
   -webkit-text-size-adjust: 100%;
   -webkit-tap-highlight-color: transparent;
+  /* The page keeps its width when a dialog locks scrolling and the scrollbar goes away. */
+  scrollbar-gutter: stable;
 }
 
 body {
