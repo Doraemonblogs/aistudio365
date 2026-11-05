@@ -318,7 +318,7 @@ onBeforeUnmount(() => {
             </div>
             <button type="button" class="btn-secondary hidden h-12 px-5 sm:inline-flex" @click="close">取消</button>
             <button type="submit" form="buy-form" class="btn-primary h-12 px-8 text-base" :disabled="soldOut || submitting">
-              {{ soldOut ? '已售罄' : submitting ? '正在下单…' : '去付款' }}
+              {{ soldOut ? '缺货' : submitting ? '正在下单…' : '去付款' }}
             </button>
           </footer>
         </template>

@@ -98,9 +98,6 @@ onBeforeUnmount(() => clearInterval(ticker));
         <p class="mt-3 text-[44px] leading-none font-semibold tracking-tight text-stone-900 tabular-nums">
           <span class="mr-1 text-2xl font-medium">¥</span>{{ yuanExact(order.amount) }}
         </p>
-        <p v-if="order.discount" class="mt-2.5 text-sm text-accent">
-          已用优惠券 <span class="font-mono">{{ order.coupon_code }}</span>，省 ¥{{ yuanExact(order.discount) }}
-        </p>
         <p class="mt-5 inline-flex items-center gap-2 rounded-full bg-white py-1 pr-1 pl-4 text-sm text-stone-500 shadow-soft">
           订单号
           <span class="font-mono font-semibold tracking-wide text-stone-900">{{ order.order_no }}</span>
@@ -146,7 +143,7 @@ onBeforeUnmount(() => clearInterval(ticker));
           <li class="flex gap-3">
             <span class="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-stone-900 text-[11px] font-semibold text-white">3</span>
             <span class="flex flex-1 flex-wrap items-center justify-between gap-2">
-              <span>需要客服办理的，加微信 <span class="font-semibold text-stone-900">{{ wechat }}</span>，发送「截图 + 订单号」</span>
+              <span>需要客服办理的，加微信 <span class="font-semibold text-stone-900">{{ wechat }}</span>，发送付款截图</span>
               <CopyButton v-if="wechat" :text="wechat" label="复制微信号" />
             </span>
           </li>

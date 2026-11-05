@@ -71,7 +71,7 @@ export function createOrder(db: DB, input: CreateOrderInput, timeoutMinutes: num
 
     const available = availableStock(db, product);
     if (available !== null && available < input.quantity) {
-      throw new AppError(409, available === 0 ? '该商品已售罄' : `库存不足，最多还能买 ${available} 件`);
+      throw new AppError(409, available === 0 ? '该商品暂时缺货' : `库存不足，最多还能买 ${available} 件`);
     }
 
     const pending = db

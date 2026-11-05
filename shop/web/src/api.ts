@@ -12,7 +12,8 @@ export interface Shop {
   categories: Category[];
 }
 
-export type StockStatus = 'in_stock' | 'low' | 'out';
+/** 库存充足 / 库存一般 / 仅剩少量 / 缺货 */
+export type StockStatus = 'plenty' | 'medium' | 'low' | 'out';
 
 export interface ProductSummary {
   id: number;

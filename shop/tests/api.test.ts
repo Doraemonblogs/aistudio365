@@ -7,6 +7,7 @@ import { buildApp } from '../server/src/app.js';
 import { openDb, type DB } from '../server/src/db/index.js';
 import { updateSettings } from '../server/src/settings.js';
 import { expireOrders } from '../server/src/shop/orders.js';
+import { stockStatus } from '../server/src/shop/products.js';
 
 let db: DB;
 let app: FastifyInstance;
@@ -72,12 +73,19 @@ afterEach(async () => {
   fs.rmSync(uploadsDir, { recursive: true, force: true });
 });
 
+describe('stock levels', () => {
+  it('reads 缺货 / 仅剩少量 / 库存一般 / 库存充足 from the units left', () => {
+    expect([0, 1, 5, 6, 20, 21, null].map(stockStatus)).toEqual(['out', 'low', 'low', 'medium', 'medium', 'plenty', 'plenty']);
+  });
+});
+
 describe('catalog', () => {
   it('lists on-shelf products only, without stock counts or card content', async () => {
     const res = await app.inject('/api/products');
     expect(res.statusCode).toBe(200);
     const products = res.json() as Record<string, unknown>[];
     expect(products.map((p) => p.name)).toEqual(['Plus', 'Gmail', 'Pool']);
+    expect(products[0]).toMatchObject({ stock_status: 'medium' });
     expect(products[1]).toMatchObject({ stock_status: 'low' });
     for (const p of products) {
       expect(p).not.toHaveProperty('stock');

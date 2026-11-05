@@ -2,6 +2,7 @@
 import { useRoute } from 'vue-router';
 import type { ProductSummary } from '../api';
 import PriceTag from './PriceTag.vue';
+import StockBadge from './StockBadge.vue';
 
 defineProps<{ product: ProductSummary }>();
 // The dialog opens over the list; keeping the query keeps the chosen category behind it.
@@ -20,15 +21,11 @@ const route = useRoute();
         class="h-full w-full object-cover transition duration-500 group-hover:scale-[1.04]"
         :class="{ 'opacity-50 grayscale': product.stock_status === 'out' }"
       />
-      <span
-        v-if="product.stock_status === 'out'"
-        class="absolute top-3 left-3 rounded-full bg-white/90 px-2.5 py-1 text-xs font-medium text-stone-600 backdrop-blur"
-      >已售罄</span>
     </div>
     <h3 class="mt-3 line-clamp-2 px-1 text-sm leading-6 text-stone-800 sm:text-[15px]">{{ product.name }}</h3>
-    <div class="mt-1 flex items-baseline gap-2 px-1">
+    <div class="mt-1 flex flex-wrap items-center justify-between gap-x-2 gap-y-0.5 px-1">
       <PriceTag :price="product.price" :original="product.original_price" />
-      <span v-if="product.stock_status === 'low'" class="text-xs text-amber-700">仅剩少量</span>
+      <StockBadge :status="product.stock_status" />
     </div>
   </RouterLink>
 </template>

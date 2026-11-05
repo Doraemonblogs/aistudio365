@@ -43,7 +43,7 @@ const banner = computed(() => {
         badge: 'bg-sky-100 text-sky-700',
         icon: ICON.check,
         title: '已付款',
-        text: `卡密已发放，看看下面的卡密和使用说明。需要客服办理的，请加微信 ${wechat.value}，发送付款截图和订单号。`,
+        text: `卡密已发放，看看下面的卡密和使用说明。需要客服办理的，请加微信 ${wechat.value}，发送付款截图。`,
       };
     case 'completed':
       return {
@@ -181,10 +181,6 @@ const allCards = computed(() => order.value?.cards.join('\n') ?? '');
       <dl class="grid grid-cols-[auto_1fr] items-center gap-x-6 gap-y-3 px-1 text-sm">
         <dt class="text-stone-400">订单号</dt>
         <dd class="flex items-center justify-end gap-2 font-mono font-medium text-stone-800">{{ order.order_no }} <CopyButton :text="order.order_no" /></dd>
-        <template v-if="order.discount">
-          <dt class="text-stone-400">优惠券</dt>
-          <dd class="text-right text-accent"><span class="font-mono">{{ order.coupon_code }}</span> −¥{{ yuanExact(order.discount) }}</dd>
-        </template>
         <dt class="text-stone-400">订单金额</dt>
         <dd class="text-right font-semibold text-stone-900">¥{{ yuanExact(order.amount) }}</dd>
         <dt class="text-stone-400">付款方式</dt>
@@ -197,7 +193,7 @@ const allCards = computed(() => order.value?.cards.join('\n') ?? '');
         </template>
       </dl>
 
-      <ContactCard>需要客服办理或遇到问题，加客服微信，发送「付款截图 + 订单号」。</ContactCard>
+      <ContactCard>需要客服办理或遇到问题，加客服微信，发送付款截图。</ContactCard>
     </template>
   </div>
 </template>

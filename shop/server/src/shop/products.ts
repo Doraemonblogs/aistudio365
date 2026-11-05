@@ -22,10 +22,12 @@ export interface ProductRow {
   updated_at: string;
 }
 
-export type StockStatus = 'in_stock' | 'low' | 'out';
+/** What the storefront shows: 库存充足 / 库存一般 / 仅剩少量 / 缺货. */
+export type StockStatus = 'plenty' | 'medium' | 'low' | 'out';
 
-/** At or below this many units the storefront says 库存紧张. */
+/** 1 to LOW_STOCK units: 仅剩少量. Up to MEDIUM_STOCK: 库存一般. More, or unlimited: 库存充足. */
 export const LOW_STOCK = 5;
+export const MEDIUM_STOCK = 20;
 
 export function getProduct(db: DB, id: number): ProductRow | undefined {
   return db.prepare('SELECT * FROM products WHERE id = ?').get(id) as ProductRow | undefined;
@@ -62,6 +64,7 @@ export function availableStock(db: DB, product: ProductRow): number | null {
 }
 
 export function stockStatus(available: number | null): StockStatus {
-  if (available === null || available > LOW_STOCK) return 'in_stock';
+  if (available === null || available > MEDIUM_STOCK) return 'plenty';
+  if (available > LOW_STOCK) return 'medium';
   return available > 0 ? 'low' : 'out';
 }
