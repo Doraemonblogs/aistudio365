@@ -1,15 +1,21 @@
 # Deploying the shop
 
 The shop runs on `root@23.246.154.136` as the Docker container `aistudio365-shop`, bound to
-`127.0.0.1:18082`. The host nginx serves it at https://aistudio365.duckdns.org with the existing
-Let's Encrypt certificate.
+`127.0.0.1:18082`. The host nginx serves it at https://aistudio365.net (`www.` redirects there) and
+still at the older https://aistudio365.duckdns.org, each with its own Let's Encrypt certificate.
+
+The shop moved to its own domain because some mainland networks reset connections to `duckdns.org`
+names (the domain in the TLS handshake is blocked; the server's IP stays reachable). The domain is
+registered at Squarespace (bought through Google Workspace); its DNS has `A` records for `@` and
+`www` pointing at the server, next to the Google Workspace mail records. The shop code has no
+domain built in, so the two addresses serve the same shop.
 
 | What | Where on the server |
 | --- | --- |
 | Current release (source) | `/opt/aistudio365-shop/src`, previous one in `src.prev`, git revision in `REVISION` |
 | Data | `/opt/aistudio365-shop/data`: `shop.db`, `uploads/`, `backups/` |
 | First admin password | `/opt/aistudio365-shop/admin-password.txt` (root only); delete it after changing the password |
-| nginx site | `/etc/nginx/sites-available/aistudio365` (certbot manages the HTTPS lines) |
+| nginx sites | `/etc/nginx/sites-available/aistudio365-net` (aistudio365.net) and `aistudio365` (duckdns); certbot manages the HTTPS lines |
 
 ## Deploy a new version
 
@@ -30,8 +36,9 @@ ssh root@23.246.154.136 "cd /opt/aistudio365-shop && docker compose -f src.prev/
 
 ## nginx
 
-The site file has one `location /` that proxies to `127.0.0.1:18082`, plus the HTTPS lines certbot
-manages. After editing it, run `nginx -t` before `systemctl reload nginx`.
+Each site file has one `location /` that proxies to `127.0.0.1:18082`, plus the HTTPS lines certbot
+manages; `aistudio365-net` also sends `www.aistudio365.net` to the bare domain. Keep the two
+`location /` blocks the same. After editing, run `nginx -t` before `systemctl reload nginx`.
 
 ## The earlier Dujiao-Next shop
 
