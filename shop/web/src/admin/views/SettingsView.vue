@@ -89,7 +89,7 @@ onBeforeUnmount(() => window.removeEventListener('beforeunload', beforeUnload));
     <div v-if="!loaded" class="card h-96 animate-pulse" />
     <form v-else class="space-y-4" novalidate @submit.prevent="save">
       <section class="card space-y-4 p-4 sm:p-5">
-        <h2 class="text-base font-semibold text-slate-900">店铺</h2>
+        <h2 class="text-base font-semibold text-stone-900">店铺</h2>
         <div>
           <label for="shop-name" class="label">店铺名称</label>
           <input id="shop-name" v-model="form.shop_name" class="input" maxlength="60" />
@@ -100,8 +100,8 @@ onBeforeUnmount(() => window.removeEventListener('beforeunload', beforeUnload));
 
       <section class="card space-y-4 p-4 sm:p-5">
         <div>
-          <h2 class="text-base font-semibold text-slate-900">客服</h2>
-          <p class="mt-0.5 text-xs text-slate-500">买家付款后会看到这里的联系方式，按提示把付款截图发给客服。</p>
+          <h2 class="text-base font-semibold text-stone-900">客服</h2>
+          <p class="mt-0.5 text-xs text-stone-500">买家付款后会看到这里的联系方式，按提示把付款截图发给客服。</p>
         </div>
         <div class="grid gap-4 sm:grid-cols-2">
           <div>
@@ -109,7 +109,7 @@ onBeforeUnmount(() => window.removeEventListener('beforeunload', beforeUnload));
             <input id="wechat" v-model="form.contact_wechat" class="input" maxlength="60" autocapitalize="off" />
           </div>
           <div>
-            <label for="qq" class="label">客服 QQ <span class="font-normal text-slate-400">选填</span></label>
+            <label for="qq" class="label">客服 QQ <span class="font-normal text-stone-400">选填</span></label>
             <input id="qq" v-model="form.contact_qq" class="input" maxlength="30" inputmode="numeric" />
           </div>
         </div>
@@ -117,8 +117,8 @@ onBeforeUnmount(() => window.removeEventListener('beforeunload', beforeUnload));
 
       <section class="card space-y-4 p-4 sm:p-5">
         <div>
-          <h2 class="text-base font-semibold text-slate-900">通用收款码</h2>
-          <p class="mt-0.5 text-xs leading-5 text-slate-500">不带金额的个人收款码，买家扫码后自己输入订单金额。商品设置了固定金额收款码时，买 1 件优先用商品自己的码。</p>
+          <h2 class="text-base font-semibold text-stone-900">通用收款码</h2>
+          <p class="mt-0.5 text-xs leading-5 text-stone-500">不带金额的个人收款码，买家扫码后自己输入订单金额。商品设置了固定金额收款码时，买 1 件优先用商品自己的码。</p>
         </div>
         <div class="grid gap-4 sm:grid-cols-2">
           <ImageUpload v-model="form.qr_wechat" label="微信收款码" />
@@ -130,27 +130,27 @@ onBeforeUnmount(() => window.removeEventListener('beforeunload', beforeUnload));
       </section>
 
       <section class="card space-y-4 p-4 sm:p-5">
-        <h2 class="text-base font-semibold text-slate-900">订单</h2>
+        <h2 class="text-base font-semibold text-stone-900">订单</h2>
         <div class="sm:max-w-xs">
           <label for="timeout" class="label">付款时限（分钟）</label>
           <input id="timeout" v-model="form.order_timeout_minutes" class="input" inputmode="numeric" />
-          <p class="mt-1.5 text-xs leading-5 text-slate-500">下单后这么久还没付款，订单自动取消、库存退回。只影响之后的新订单。</p>
+          <p class="mt-1.5 text-xs leading-5 text-stone-500">下单后这么久还没付款，订单自动取消、库存退回。只影响之后的新订单。</p>
         </div>
       </section>
 
       <section class="card flex items-center justify-between gap-3 p-4 sm:p-5">
         <div>
-          <h2 class="text-base font-semibold text-slate-900">账号</h2>
-          <p class="mt-0.5 text-sm text-slate-500">当前登录：{{ adminState.username }}</p>
+          <h2 class="text-base font-semibold text-stone-900">账号</h2>
+          <p class="mt-0.5 text-sm text-stone-500">当前登录：{{ adminState.username }}</p>
         </div>
         <RouterLink to="/admin/settings/password" class="btn-secondary h-9 px-4 text-sm">修改密码</RouterLink>
       </section>
 
-      <div class="sticky bottom-0 z-20 -mx-4 border-t border-slate-200 bg-white/95 px-4 py-3 backdrop-blur sm:mx-0 sm:rounded-2xl sm:border sm:shadow-sm">
+      <div class="sticky bottom-0 z-20 -mx-4 border-t border-stone-200 bg-white/95 px-4 py-3 backdrop-blur sm:mx-0 sm:rounded-2xl sm:border sm:shadow-sm">
         <div class="flex items-center justify-end gap-3">
           <span v-if="error" class="mr-auto text-sm text-rose-600" role="alert">{{ error }}</span>
           <span v-else-if="dirty" class="mr-auto text-sm text-amber-700">有修改未保存</span>
-          <span v-else class="mr-auto text-sm text-slate-400">改完点保存</span>
+          <span v-else class="mr-auto text-sm text-stone-400">改完点保存</span>
           <button type="submit" class="btn-primary h-10 px-6 text-sm" :disabled="saving">{{ saving ? '保存中…' : '保存设置' }}</button>
         </div>
       </div>

@@ -33,17 +33,17 @@ async function logout() {
 </script>
 
 <template>
-  <div class="min-h-dvh bg-slate-50">
-    <header class="sticky top-0 z-30 border-b border-slate-200 bg-white/95 backdrop-blur">
+  <div class="min-h-dvh bg-stone-50">
+    <header class="sticky top-0 z-30 border-b border-stone-200 bg-white/95 backdrop-blur">
       <div class="mx-auto flex h-14 max-w-6xl items-center gap-3 px-4 sm:gap-6 sm:px-6">
-        <RouterLink to="/admin/orders" class="hidden shrink-0 text-[15px] font-bold text-slate-900 sm:block">管理后台</RouterLink>
+        <RouterLink to="/admin/orders" class="hidden shrink-0 text-[15px] font-bold text-stone-900 sm:block">管理后台</RouterLink>
         <nav class="-mx-1 flex min-w-0 flex-1 gap-1 overflow-x-auto px-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" aria-label="后台导航">
           <RouterLink
             v-for="link in links"
             :key="link.to"
             :to="link.to"
             class="relative shrink-0 rounded-lg px-3 py-1.5 text-sm font-medium transition"
-            :class="route.path.startsWith(link.to) ? 'bg-slate-900 text-white' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'"
+            :class="route.path.startsWith(link.to) ? 'bg-stone-900 text-white' : 'text-stone-600 hover:bg-stone-100 hover:text-stone-900'"
           >
             {{ link.label }}
             <span
@@ -53,8 +53,8 @@ async function logout() {
           </RouterLink>
         </nav>
         <div class="flex shrink-0 items-center gap-1 text-sm">
-          <a href="/" target="_blank" rel="noopener" class="hidden rounded-lg px-2.5 py-1.5 text-slate-500 hover:bg-slate-100 hover:text-slate-800 sm:inline">查看商店</a>
-          <button type="button" class="rounded-lg px-2.5 py-1.5 text-slate-500 hover:bg-slate-100 hover:text-slate-800" @click="logout">退出</button>
+          <a href="/" target="_blank" rel="noopener" class="hidden rounded-lg px-2.5 py-1.5 text-stone-500 hover:bg-stone-100 hover:text-stone-800 sm:inline">查看商店</a>
+          <button type="button" class="rounded-lg px-2.5 py-1.5 text-stone-500 hover:bg-stone-100 hover:text-stone-800" @click="logout">退出</button>
         </div>
       </div>
     </header>

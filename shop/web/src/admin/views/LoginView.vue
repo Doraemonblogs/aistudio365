@@ -37,10 +37,10 @@ async function submit() {
 </script>
 
 <template>
-  <div class="flex min-h-dvh items-center justify-center bg-slate-50 px-4">
+  <div class="flex min-h-dvh items-center justify-center bg-stone-50 px-4">
     <form class="card w-full max-w-sm p-6" novalidate @submit.prevent="submit">
-      <h1 class="text-xl font-bold text-slate-900">管理后台</h1>
-      <p class="mt-1 text-sm text-slate-500">登录后处理订单和商品</p>
+      <h1 class="text-xl font-bold text-stone-900">管理后台</h1>
+      <p class="mt-1 text-sm text-stone-500">登录后处理订单和商品</p>
       <div class="mt-6 space-y-4">
         <div>
           <label for="username" class="label">用户名</label>

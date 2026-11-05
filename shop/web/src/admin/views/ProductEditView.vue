@@ -291,7 +291,7 @@ const fieldClass = (key: keyof Form) => (errors.value[key] ? 'border-rose-400 fo
 
 <template>
   <div class="mx-auto max-w-3xl">
-    <RouterLink to="/admin/products" class="mb-3 inline-flex items-center gap-1 text-sm text-slate-500 hover:text-slate-800">
+    <RouterLink to="/admin/products" class="mb-3 inline-flex items-center gap-1 text-sm text-stone-500 hover:text-stone-800">
       <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" class="h-4 w-4" aria-hidden="true">
         <path d="M12 5l-5 5 5 5" stroke-linecap="round" stroke-linejoin="round" />
       </svg>
@@ -299,20 +299,20 @@ const fieldClass = (key: keyof Form) => (errors.value[key] ? 'border-rose-400 fo
     </RouterLink>
 
     <div v-if="loadError" class="card p-10 text-center">
-      <p class="text-slate-600">{{ loadError }}</p>
+      <p class="text-stone-600">{{ loadError }}</p>
       <RouterLink to="/admin/products" class="btn-secondary mt-4">返回商品列表</RouterLink>
     </div>
     <div v-else-if="!loaded" class="card h-96 animate-pulse" />
 
     <form v-else class="space-y-4" novalidate @submit.prevent="save">
       <div class="flex items-center justify-between gap-3">
-        <h1 class="truncate text-xl font-bold text-slate-900">{{ isNew ? '新增商品' : '编辑商品' }}</h1>
+        <h1 class="truncate text-xl font-bold text-stone-900">{{ isNew ? '新增商品' : '编辑商品' }}</h1>
         <a v-if="product && product.status === 'on'" :href="`/p/${product.id}`" target="_blank" rel="noopener" class="shrink-0 text-sm text-blue-600">在商店查看</a>
       </div>
 
       <!-- Basics -->
       <section class="card space-y-4 p-4 sm:p-5">
-        <h2 class="text-base font-semibold text-slate-900">基本信息</h2>
+        <h2 class="text-base font-semibold text-stone-900">基本信息</h2>
         <div>
           <label for="name" class="label">商品名称</label>
           <input id="name" v-model="form.name" class="input" :class="fieldClass('name')" maxlength="200" />
@@ -327,7 +327,7 @@ const fieldClass = (key: keyof Form) => (errors.value[key] ? 'border-rose-400 fo
             </select>
           </div>
           <div>
-            <label for="sort" class="label">排序 <span class="font-normal text-slate-400">数字越大越靠前</span></label>
+            <label for="sort" class="label">排序 <span class="font-normal text-stone-400">数字越大越靠前</span></label>
             <input id="sort" v-model="form.sort" class="input" :class="fieldClass('sort')" inputmode="numeric" />
             <p v-if="errors.sort" class="mt-1.5 text-xs text-rose-600">{{ errors.sort }}</p>
           </div>
@@ -339,20 +339,20 @@ const fieldClass = (key: keyof Form) => (errors.value[key] ? 'border-rose-400 fo
             <p v-if="errors.price" class="mt-1.5 text-xs text-rose-600">{{ errors.price }}</p>
           </div>
           <div>
-            <label for="original" class="label">原价（元） <span class="font-normal text-slate-400">选填，显示为划线价</span></label>
+            <label for="original" class="label">原价（元） <span class="font-normal text-stone-400">选填，显示为划线价</span></label>
             <input id="original" v-model="form.original_price" class="input" :class="fieldClass('original_price')" inputmode="decimal" />
             <p v-if="errors.original_price" class="mt-1.5 text-xs text-rose-600">{{ errors.original_price }}</p>
           </div>
         </div>
         <div>
-          <label for="summary" class="label">简介 <span class="font-normal text-slate-400">选填，显示在价格下面</span></label>
+          <label for="summary" class="label">简介 <span class="font-normal text-stone-400">选填，显示在价格下面</span></label>
           <input id="summary" v-model="form.summary" class="input" maxlength="500" />
         </div>
         <ImageUpload v-model="form.image" label="商品图片" hint="建议正方形，PNG / JPG，不超过 5 MB。" />
-        <div class="flex items-center justify-between gap-3 rounded-xl bg-slate-50 px-3.5 py-3">
+        <div class="flex items-center justify-between gap-3 rounded-xl bg-stone-50 px-3.5 py-3">
           <div>
-            <p class="text-sm font-medium text-slate-900">{{ form.status === 'on' ? '在售' : '已下架' }}</p>
-            <p class="text-xs text-slate-500">{{ form.status === 'on' ? '商店里可以看到并购买' : '商店里看不到，已有订单不受影响' }}</p>
+            <p class="text-sm font-medium text-stone-900">{{ form.status === 'on' ? '在售' : '已下架' }}</p>
+            <p class="text-xs text-stone-500">{{ form.status === 'on' ? '商店里可以看到并购买' : '商店里看不到，已有订单不受影响' }}</p>
           </div>
           <button
             type="button"
@@ -360,7 +360,7 @@ const fieldClass = (key: keyof Form) => (errors.value[key] ? 'border-rose-400 fo
             :aria-checked="form.status === 'on'"
             aria-label="在售"
             class="relative inline-flex h-7 w-12 shrink-0 items-center rounded-full transition"
-            :class="form.status === 'on' ? 'bg-emerald-500' : 'bg-slate-300'"
+            :class="form.status === 'on' ? 'bg-emerald-500' : 'bg-stone-300'"
             @click="form.status = form.status === 'on' ? 'off' : 'on'"
           >
             <span class="absolute h-6 w-6 rounded-full bg-white shadow transition-all" :class="form.status === 'on' ? 'left-[22px]' : 'left-0.5'" />
@@ -371,8 +371,8 @@ const fieldClass = (key: keyof Form) => (errors.value[key] ? 'border-rose-400 fo
       <!-- Delivery -->
       <section class="card space-y-4 p-4 sm:p-5">
         <div>
-          <h2 class="text-base font-semibold text-slate-900">卡密</h2>
-          <p class="mt-0.5 text-xs text-slate-500">买家点「我已付款」（或你在后台确认收款）后，在订单页看到的内容。</p>
+          <h2 class="text-base font-semibold text-stone-900">卡密</h2>
+          <p class="mt-0.5 text-xs text-stone-500">买家点「我已付款」（或你在后台确认收款）后，在订单页看到的内容。</p>
         </div>
         <div class="grid gap-3 sm:grid-cols-2" role="radiogroup" aria-label="卡密方式">
           <button
@@ -385,11 +385,11 @@ const fieldClass = (key: keyof Form) => (errors.value[key] ? 'border-rose-400 fo
             role="radio"
             :aria-checked="form.card_mode === mode.key"
             class="rounded-xl p-3.5 text-left ring-1 ring-inset transition"
-            :class="form.card_mode === mode.key ? 'bg-blue-50 ring-2 ring-blue-500' : 'bg-white ring-slate-200 hover:bg-slate-50'"
+            :class="form.card_mode === mode.key ? 'bg-blue-50 ring-2 ring-blue-500' : 'bg-white ring-stone-200 hover:bg-stone-50'"
             @click="form.card_mode = mode.key"
           >
-            <p class="text-sm font-semibold" :class="form.card_mode === mode.key ? 'text-blue-700' : 'text-slate-900'">{{ mode.title }}</p>
-            <p class="mt-0.5 text-xs leading-5 text-slate-500">{{ mode.text }}</p>
+            <p class="text-sm font-semibold" :class="form.card_mode === mode.key ? 'text-blue-700' : 'text-stone-900'">{{ mode.title }}</p>
+            <p class="mt-0.5 text-xs leading-5 text-stone-500">{{ mode.text }}</p>
           </button>
         </div>
 
@@ -408,8 +408,8 @@ const fieldClass = (key: keyof Form) => (errors.value[key] ? 'border-rose-400 fo
         <div class="grid gap-4 sm:grid-cols-2">
           <div v-if="form.card_mode === 'fixed'">
             <span class="label">库存</span>
-            <label class="mb-2 flex items-center gap-2 text-sm text-slate-700">
-              <input v-model="form.unlimited" type="checkbox" class="h-4 w-4 rounded border-slate-300 text-blue-600" />
+            <label class="mb-2 flex items-center gap-2 text-sm text-stone-700">
+              <input v-model="form.unlimited" type="checkbox" class="h-4 w-4 rounded border-stone-300 text-blue-600" />
               不限库存
             </label>
             <input
@@ -422,7 +422,7 @@ const fieldClass = (key: keyof Form) => (errors.value[key] ? 'border-rose-400 fo
               placeholder="剩余可卖数量"
             />
             <p v-if="errors.stock" class="mt-1.5 text-xs text-rose-600">{{ errors.stock }}</p>
-            <p v-else-if="!form.unlimited && product && product.pending > 0" class="mt-1.5 text-xs text-slate-500">
+            <p v-else-if="!form.unlimited && product && product.pending > 0" class="mt-1.5 text-xs text-stone-500">
               另有 {{ product.pending }} 件被待付款订单占用，超时取消后会退回。
             </p>
           </div>
@@ -437,18 +437,18 @@ const fieldClass = (key: keyof Form) => (errors.value[key] ? 'border-rose-400 fo
       <!-- Card pool -->
       <section v-if="savedAsPool && form.card_mode === 'pool' && product" class="card space-y-4 p-4 sm:p-5">
         <div class="flex flex-wrap items-baseline justify-between gap-2">
-          <h2 class="text-base font-semibold text-slate-900">卡密池</h2>
-          <p class="text-sm text-slate-500">
-            可用 <span class="font-semibold text-slate-900 tabular-nums">{{ product.cards_available }}</span>
+          <h2 class="text-base font-semibold text-stone-900">卡密池</h2>
+          <p class="text-sm text-stone-500">
+            可用 <span class="font-semibold text-stone-900 tabular-nums">{{ product.cards_available }}</span>
             · 已售 <span class="tabular-nums">{{ product.cards_sold }}</span>
             <template v-if="product.pending > 0"> · 待付款占用 <span class="tabular-nums text-amber-700">{{ product.pending }}</span></template>
           </p>
         </div>
         <div>
-          <label for="import" class="label">导入卡密 <span class="font-normal text-slate-400">一行一张，重复的会自动跳过</span></label>
+          <label for="import" class="label">导入卡密 <span class="font-normal text-stone-400">一行一张，重复的会自动跳过</span></label>
           <textarea id="import" v-model="importText" rows="4" class="input h-auto py-2.5 font-mono text-[13px] leading-6" placeholder="卡号 密码" />
           <div class="mt-2 flex items-center justify-between gap-3">
-            <span class="text-xs text-slate-400">{{ importLines ? `共 ${importLines} 行` : '' }}</span>
+            <span class="text-xs text-stone-400">{{ importLines ? `共 ${importLines} 行` : '' }}</span>
             <button type="button" class="btn-primary h-9 px-4 text-sm" :disabled="importing || importLines === 0" @click="importCards">
               {{ importing ? '导入中…' : '导入' }}
             </button>
@@ -461,17 +461,17 @@ const fieldClass = (key: keyof Form) => (errors.value[key] ? 'border-rose-400 fo
               :key="item.key"
               type="button"
               class="rounded-full px-3 py-1 text-xs font-medium ring-1 ring-inset"
-              :class="cardFilter === item.key ? 'bg-slate-900 text-white ring-slate-900' : 'bg-white text-slate-600 ring-slate-200'"
+              :class="cardFilter === item.key ? 'bg-stone-900 text-white ring-stone-900' : 'bg-white text-stone-600 ring-stone-200'"
               @click="cardFilter = item.key"
             >{{ item.label }}</button>
           </div>
-          <p v-if="cards.length === 0" class="rounded-xl bg-slate-50 px-3 py-6 text-center text-sm text-slate-500">
+          <p v-if="cards.length === 0" class="rounded-xl bg-stone-50 px-3 py-6 text-center text-sm text-stone-500">
             {{ cardFilter === 'available' ? '没有可用卡密' : '还没有卖出的卡密' }}
           </p>
-          <ul v-else class="max-h-96 divide-y divide-slate-100 overflow-y-auto rounded-xl ring-1 ring-slate-200">
+          <ul v-else class="max-h-96 divide-y divide-stone-100 overflow-y-auto rounded-xl ring-1 ring-stone-200">
             <li v-for="card in cards" :key="card.id" class="flex items-center gap-3 px-3 py-2">
-              <span class="min-w-0 flex-1 font-mono text-[13px] break-all text-slate-800">{{ card.content }}</span>
-              <span v-if="card.status === 'sold'" class="shrink-0 text-right text-xs text-slate-400">
+              <span class="min-w-0 flex-1 font-mono text-[13px] break-all text-stone-800">{{ card.content }}</span>
+              <span v-if="card.status === 'sold'" class="shrink-0 text-right text-xs text-stone-400">
                 {{ card.order_no }}<br />{{ formatTime(card.sold_at) }}
               </span>
               <button v-else type="button" class="shrink-0 rounded-lg px-2 py-1 text-xs text-rose-600 hover:bg-rose-50" @click="deleteCard(card)">删除</button>
@@ -482,7 +482,7 @@ const fieldClass = (key: keyof Form) => (errors.value[key] ? 'border-rose-400 fo
 
       <!-- Content -->
       <section class="card space-y-5 p-4 sm:p-5">
-        <h2 class="text-base font-semibold text-slate-900">说明</h2>
+        <h2 class="text-base font-semibold text-stone-900">说明</h2>
         <MarkdownField v-model="form.description" label="商品详情" :rows="8" placeholder="商品页下方显示的详细介绍" />
         <MarkdownField
           v-model="form.instructions"
@@ -496,11 +496,11 @@ const fieldClass = (key: keyof Form) => (errors.value[key] ? 'border-rose-400 fo
       <!-- Fixed-amount QR codes -->
       <section class="card space-y-4 p-4 sm:p-5">
         <div>
-          <h2 class="text-base font-semibold text-slate-900">固定金额收款码 <span class="text-sm font-normal text-slate-400">选填</span></h2>
-          <p class="mt-0.5 text-xs leading-5 text-slate-500">
+          <h2 class="text-base font-semibold text-stone-900">固定金额收款码 <span class="text-sm font-normal text-stone-400">选填</span></h2>
+          <p class="mt-0.5 text-xs leading-5 text-stone-500">
             按这个商品的售价生成的收款码。买 1 件时用它，买家扫码不用输金额；买多件或没设置时，用“设置”里的通用收款码。改了售价记得换码。
           </p>
-          <details class="mt-1.5 text-xs leading-5 text-slate-500">
+          <details class="mt-1.5 text-xs leading-5 text-stone-500">
             <summary class="cursor-pointer text-blue-600">怎么生成固定金额收款码？</summary>
             <ul class="mt-1 list-disc space-y-0.5 pl-4">
               <li>微信：我 → 服务 → 收付款 → 二维码收款 → 设置金额，填售价后保存收款码图片</li>
@@ -520,10 +520,10 @@ const fieldClass = (key: keyof Form) => (errors.value[key] ? 'border-rose-400 fo
       </div>
 
       <!-- Save bar -->
-      <div class="sticky bottom-0 z-20 -mx-4 border-t border-slate-200 bg-white/95 px-4 py-3 backdrop-blur sm:mx-0 sm:rounded-2xl sm:border sm:shadow-sm">
+      <div class="sticky bottom-0 z-20 -mx-4 border-t border-stone-200 bg-white/95 px-4 py-3 backdrop-blur sm:mx-0 sm:rounded-2xl sm:border sm:shadow-sm">
         <div class="flex items-center justify-end gap-3">
           <span v-if="dirty" class="mr-auto text-sm text-amber-700">有修改未保存</span>
-          <span v-else-if="!isNew" class="mr-auto text-sm text-slate-400">已保存</span>
+          <span v-else-if="!isNew" class="mr-auto text-sm text-stone-400">已保存</span>
           <RouterLink to="/admin/products" class="btn-secondary h-10 px-4 text-sm">返回</RouterLink>
           <button type="submit" class="btn-primary h-10 px-6 text-sm" :disabled="saving">
             {{ saving ? '保存中…' : isNew ? '创建商品' : '保存' }}

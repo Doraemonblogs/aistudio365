@@ -88,8 +88,8 @@ const tools = [
 <template>
   <div>
     <div class="mb-1.5 flex items-center justify-between gap-3">
-      <span class="text-sm font-medium text-slate-700">{{ label }}</span>
-      <div class="flex rounded-lg bg-slate-100 p-0.5 text-xs font-medium md:hidden" role="tablist">
+      <span class="text-sm font-medium text-stone-700">{{ label }}</span>
+      <div class="flex rounded-lg bg-stone-100 p-0.5 text-xs font-medium md:hidden" role="tablist">
         <button
           v-for="item in tabs"
           :key="item.key"
@@ -97,7 +97,7 @@ const tools = [
           role="tab"
           :aria-selected="tab === item.key"
           class="rounded-md px-2.5 py-1"
-          :class="tab === item.key ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500'"
+          :class="tab === item.key ? 'bg-white text-stone-900 shadow-sm' : 'text-stone-500'"
           @click="tab = item.key"
         >{{ item.text }}</button>
       </div>
@@ -105,16 +105,16 @@ const tools = [
 
     <div class="grid gap-3 md:grid-cols-2">
       <div
-        class="overflow-hidden rounded-xl border border-slate-300 bg-white transition focus-within:border-blue-500 focus-within:ring-4 focus-within:ring-blue-100"
+        class="overflow-hidden rounded-xl border border-stone-300 bg-white transition focus-within:border-blue-500 focus-within:ring-4 focus-within:ring-blue-100"
         :class="{ 'hidden md:block': tab === 'preview' }"
       >
-        <div class="flex flex-wrap gap-0.5 border-b border-slate-200 bg-slate-50 px-1.5 py-1">
+        <div class="flex flex-wrap gap-0.5 border-b border-stone-200 bg-stone-50 px-1.5 py-1">
           <button
             v-for="tool in tools"
             :key="tool.label"
             type="button"
             :title="tool.title"
-            class="rounded-md px-2 py-1 text-xs text-slate-600 hover:bg-white hover:text-slate-900"
+            class="rounded-md px-2 py-1 text-xs text-stone-600 hover:bg-white hover:text-stone-900"
             :class="{ 'font-bold': tool.bold }"
             @click="tool.run"
           >{{ tool.label }}</button>
@@ -125,7 +125,7 @@ const tools = [
           :rows="rows"
           :placeholder="placeholder"
           :aria-label="label"
-          class="block w-full resize-y bg-transparent px-3.5 py-2.5 text-[15px] leading-6 text-slate-900 outline-none placeholder:text-slate-400"
+          class="block w-full resize-y bg-transparent px-3.5 py-2.5 text-[15px] leading-6 text-stone-900 outline-none placeholder:text-stone-400"
           @input="commit"
           @keydown.ctrl.b.prevent="tools[0]!.run()"
           @keydown.meta.b.prevent="tools[0]!.run()"
@@ -133,19 +133,19 @@ const tools = [
       </div>
 
       <div
-        class="min-h-24 rounded-xl bg-slate-50 px-3.5 py-2.5 ring-1 ring-slate-200 ring-inset"
+        class="min-h-24 rounded-xl bg-stone-50 px-3.5 py-2.5 ring-1 ring-stone-200 ring-inset"
         :class="{ 'hidden md:block': tab === 'edit' }"
         aria-live="polite"
       >
-        <p class="mb-1 hidden text-[11px] font-medium tracking-wide text-slate-400 md:block">预览</p>
+        <p class="mb-1 hidden text-[11px] font-medium tracking-wide text-stone-400 md:block">预览</p>
         <HtmlContent v-if="html" :html="html" />
-        <p v-else class="text-sm text-slate-400">还没有内容</p>
+        <p v-else class="text-sm text-stone-400">还没有内容</p>
       </div>
     </div>
 
-    <p class="mt-1 text-xs leading-5 text-slate-400">
+    <p class="mt-1 text-xs leading-5 text-stone-400">
       <template v-if="hint">{{ hint }}</template>
-      回车换行，空一行分段；<code class="text-slate-500">**文字**</code> 加粗，<code class="text-slate-500">- </code> 开头是列表。
+      回车换行，空一行分段；<code class="text-stone-500">**文字**</code> 加粗，<code class="text-stone-500">- </code> 开头是列表。
     </p>
   </div>
 </template>

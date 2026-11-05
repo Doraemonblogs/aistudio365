@@ -1,36 +1,31 @@
 <script setup lang="ts">
 import type { ProductSummary } from '../api';
 import PriceTag from './PriceTag.vue';
-import StockBadge from './StockBadge.vue';
 
 defineProps<{ product: ProductSummary }>();
 </script>
 
 <template>
-  <RouterLink
-    :to="`/p/${product.id}`"
-    class="group flex flex-col overflow-hidden rounded-2xl bg-white ring-1 ring-slate-200/80 transition duration-200 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-slate-200/70"
-  >
-    <div class="relative aspect-square overflow-hidden bg-slate-100">
+  <!-- No frame around the card: the picture carries it, name and price sit on the page. -->
+  <RouterLink :to="`/p/${product.id}`" class="group block outline-none">
+    <div class="relative aspect-square overflow-hidden rounded-3xl bg-white shadow-soft transition duration-300 group-hover:-translate-y-1 group-focus-visible:ring-4 group-focus-visible:ring-stone-300">
       <img
         v-if="product.image"
         :src="product.image"
         :alt="product.name"
         loading="lazy"
-        class="h-full w-full object-cover transition duration-300 group-hover:scale-[1.03]"
-        :class="{ 'opacity-60 grayscale': product.stock_status === 'out' }"
+        class="h-full w-full object-cover transition duration-500 group-hover:scale-[1.04]"
+        :class="{ 'opacity-50 grayscale': product.stock_status === 'out' }"
       />
       <span
         v-if="product.stock_status === 'out'"
-        class="absolute top-2 left-2 rounded-full bg-slate-900/75 px-2 py-0.5 text-xs font-medium text-white"
+        class="absolute top-3 left-3 rounded-full bg-white/90 px-2.5 py-1 text-xs font-medium text-stone-600 backdrop-blur"
       >已售罄</span>
     </div>
-    <div class="flex flex-1 flex-col gap-2 p-3">
-      <h3 class="line-clamp-2 text-sm leading-5 font-semibold text-slate-900">{{ product.name }}</h3>
-      <div class="mt-auto flex items-end justify-between gap-2">
-        <PriceTag :price="product.price" :original="product.original_price" />
-        <StockBadge v-if="product.stock_status !== 'out'" :status="product.stock_status" />
-      </div>
+    <h3 class="mt-3 line-clamp-2 px-1 text-sm leading-6 text-stone-800 sm:text-[15px]">{{ product.name }}</h3>
+    <div class="mt-1 flex items-baseline gap-2 px-1">
+      <PriceTag :price="product.price" :original="product.original_price" />
+      <span v-if="product.stock_status === 'low'" class="text-xs text-amber-700">仅剩少量</span>
     </div>
   </RouterLink>
 </template>

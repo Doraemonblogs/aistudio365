@@ -22,7 +22,7 @@ watch(
   <RouterView v-if="isAdmin" />
   <div v-else class="flex min-h-dvh flex-col">
     <AppHeader />
-    <main class="mx-auto w-full max-w-5xl flex-1 px-4 pt-4 pb-12 sm:px-6 sm:pt-6">
+    <main class="mx-auto w-full max-w-5xl flex-1 px-5 pt-2 pb-16 sm:px-8 sm:pt-6">
       <RouterView />
     </main>
     <AppFooter />

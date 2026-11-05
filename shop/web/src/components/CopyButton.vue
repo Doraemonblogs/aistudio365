@@ -17,8 +17,8 @@ async function copy() {
 <template>
   <button
     type="button"
-    class="shrink-0 rounded-full px-3 py-1 text-xs font-semibold ring-1 ring-inset transition"
-    :class="copied ? 'bg-emerald-50 text-emerald-700 ring-emerald-200' : 'bg-white text-blue-600 ring-blue-200 hover:bg-blue-50'"
+    class="shrink-0 rounded-full px-3 py-1 text-xs font-medium transition"
+    :class="copied ? 'bg-emerald-100/70 text-emerald-800' : 'bg-stone-900/5 text-stone-700 hover:bg-stone-900/10'"
     @click="copy"
   >
     {{ copied ? '已复制' : label }}

@@ -78,13 +78,13 @@ onBeforeUnmount(() => clearInterval(ticker));
 </script>
 
 <template>
-  <div class="mx-auto max-w-md space-y-4">
-    <section v-if="!order" class="card p-5">
-      <h1 class="text-base font-semibold text-slate-900">订单 {{ orderNo }}</h1>
-      <p v-if="loading" class="mt-2 text-sm text-slate-500">正在加载订单…</p>
+  <div class="mx-auto max-w-md">
+    <section v-if="!order" class="card p-6">
+      <h1 class="text-lg font-semibold text-stone-900">订单 {{ orderNo }}</h1>
+      <p v-if="loading" class="mt-2 text-sm text-stone-500">正在加载订单…</p>
       <template v-else>
-        <p class="mt-1 text-sm text-slate-500">输入下单时填写的手机号，查看付款方式。</p>
-        <div class="mt-4">
+        <p class="mt-1 text-sm text-stone-500">输入下单时填写的手机号，查看付款方式。</p>
+        <div class="mt-5">
           <PhoneForm :initial="phone" submit-label="查看" :busy="loading" @submit="load" />
         </div>
         <p v-if="error" class="mt-3 text-sm text-rose-600" role="alert">{{ error }}</p>
@@ -92,64 +92,60 @@ onBeforeUnmount(() => clearInterval(ticker));
     </section>
 
     <template v-else>
-      <section class="card p-5 text-center">
-        <p class="text-sm text-slate-500">
-          应付金额 ·
-          <span :class="order.pay_method === 'wechat' ? 'text-wechat' : 'text-alipay'" class="font-semibold">{{ methodText }}扫码</span>
+      <!-- The amount sits on the page itself; only the QR code gets a surface. -->
+      <div class="pt-2 text-center">
+        <p class="line-clamp-1 text-sm text-stone-500">{{ order.product_name }} × {{ order.quantity }}</p>
+        <p class="mt-3 text-[44px] leading-none font-semibold tracking-tight text-stone-900 tabular-nums">
+          <span class="mr-1 text-2xl font-medium">¥</span>{{ yuanExact(order.amount) }}
         </p>
-        <p class="mt-1 text-4xl font-bold tracking-tight text-slate-900 tabular-nums">
-          <span class="mr-0.5 text-2xl">¥</span>{{ yuanExact(order.amount) }}
-        </p>
-        <p class="mt-2 text-sm text-slate-500">{{ order.product_name }} × {{ order.quantity }}</p>
-        <div class="mt-4 flex items-center justify-center gap-2 rounded-xl bg-slate-50 px-3 py-2">
-          <span class="text-sm text-slate-500">订单号</span>
-          <span class="font-mono text-[15px] font-semibold tracking-wide text-slate-900">{{ order.order_no }}</span>
+        <p class="mt-5 inline-flex items-center gap-2 rounded-full bg-white py-1 pr-1 pl-4 text-sm text-stone-500 shadow-soft">
+          订单号
+          <span class="font-mono font-semibold tracking-wide text-stone-900">{{ order.order_no }}</span>
           <CopyButton :text="order.order_no" />
-        </div>
-        <p class="mt-3 text-xs text-slate-500">
-          请在 <span class="font-semibold text-amber-600 tabular-nums">{{ countdown }}</span> 内付款并点「我已付款」，超时订单会自动取消
+        </p>
+      </div>
+
+      <section class="card mt-7 px-6 pt-6 pb-5 text-center">
+        <p class="inline-flex items-center gap-2 text-sm font-medium" :class="order.pay_method === 'wechat' ? 'text-wechat' : 'text-alipay'">
+          <span class="h-2 w-2 rounded-full" :class="order.pay_method === 'wechat' ? 'bg-wechat' : 'bg-alipay'" aria-hidden="true" />
+          {{ methodText }}扫码付款
+        </p>
+        <template v-if="order.qr?.url">
+          <img :src="order.qr.url" :alt="`${methodText}收款码`" class="mx-auto mt-4 w-full max-w-[240px] rounded-2xl" />
+          <p class="mt-5 text-sm font-medium" :class="order.qr.fixed_amount ? 'text-emerald-700' : 'text-amber-700'">
+            <template v-if="order.qr.fixed_amount">固定金额收款码，扫码直接付款即可</template>
+            <template v-else>付款时请输入 ¥{{ yuanExact(order.amount) }}，金额要一致</template>
+          </p>
+          <p class="mt-1.5 text-xs leading-5 text-stone-400">在手机上：长按或截图保存收款码，再到{{ methodText }}「扫一扫」里从相册选择</p>
+        </template>
+        <p v-else class="mt-4 text-sm text-stone-600">收款码暂未设置，请直接联系客服微信付款。</p>
+        <p class="mt-5 rounded-full bg-stone-100 px-4 py-2 text-xs text-stone-500">
+          请在 <span class="font-semibold text-stone-800 tabular-nums">{{ countdown }}</span> 内付款，超时订单会自动取消
         </p>
       </section>
 
-      <section class="card p-5 text-center">
-        <template v-if="order.qr?.url">
-          <img :src="order.qr.url" :alt="`${methodText}收款码`" class="mx-auto w-full max-w-[260px] rounded-xl ring-1 ring-slate-200" />
-          <p
-            class="mt-4 rounded-xl px-3 py-2 text-sm font-medium"
-            :class="order.qr.fixed_amount ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-800'"
-          >
-            <template v-if="order.qr.fixed_amount">这是固定金额的收款码，扫码后直接付款即可</template>
-            <template v-else>付款时请输入金额 ¥{{ yuanExact(order.amount) }}，金额必须一致</template>
-          </p>
-          <p class="mt-2 text-xs leading-5 text-slate-500">
-            用手机下单的话：长按或截图保存收款码，再到{{ methodText }}「扫一扫」里从相册选择
-          </p>
-        </template>
-        <p v-else class="text-sm text-slate-600">收款码暂未设置，请直接联系客服微信付款。</p>
-      </section>
-
-      <section class="card p-5">
-        <h2 class="text-base font-semibold text-slate-900">付款后请这样做</h2>
-        <ol class="mt-3 space-y-3 text-sm leading-6 text-slate-700">
+      <section class="mt-8 px-1">
+        <h2 class="text-[15px] font-semibold text-stone-900">付款之后</h2>
+        <ol class="mt-3 space-y-3 text-sm leading-6 text-stone-600">
           <li class="flex gap-3">
-            <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-blue-50 text-xs font-bold text-blue-600">1</span>
-            <span>用{{ methodText }}扫码付款 ¥{{ yuanExact(order.amount) }}，付款备注可以填订单号</span>
+            <span class="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-stone-900 text-[11px] font-semibold text-white">1</span>
+            <span>截图付款成功的页面</span>
           </li>
           <li class="flex gap-3">
-            <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-blue-50 text-xs font-bold text-blue-600">2</span>
-            <span>截图付款成功页面，再点下方「我已付款」，马上就能看到卡密</span>
+            <span class="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-stone-900 text-[11px] font-semibold text-white">2</span>
+            <span>点下方「我已付款」，马上就能看到卡密</span>
           </li>
           <li class="flex gap-3">
-            <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-blue-50 text-xs font-bold text-blue-600">3</span>
+            <span class="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-stone-900 text-[11px] font-semibold text-white">3</span>
             <span class="flex flex-1 flex-wrap items-center justify-between gap-2">
-              <span>需要客服办理的，添加客服微信 <span class="font-semibold text-slate-900">{{ wechat }}</span>，发送「截图 + 订单号」</span>
+              <span>需要客服办理的，加微信 <span class="font-semibold text-stone-900">{{ wechat }}</span>，发送「截图 + 订单号」</span>
               <CopyButton v-if="wechat" :text="wechat" label="复制微信号" />
             </span>
           </li>
         </ol>
       </section>
 
-      <div class="grid gap-3">
+      <div class="mt-8 grid gap-3">
         <button type="button" class="btn-primary h-12 text-base" :disabled="paying" @click="markPaid">
           {{ paying ? '正在提交…' : '我已付款，查看卡密' }}
         </button>

@@ -8,7 +8,7 @@ import { toasts } from '../state';
       v-for="item in toasts"
       :key="item.id"
       class="rounded-xl px-4 py-2.5 text-sm font-medium text-white shadow-lg"
-      :class="item.tone === 'ok' ? 'bg-slate-900' : 'bg-rose-600'"
+      :class="item.tone === 'ok' ? 'bg-stone-900' : 'bg-rose-600'"
     >
       {{ item.text }}
     </div>

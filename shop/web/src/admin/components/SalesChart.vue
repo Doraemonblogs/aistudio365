@@ -115,13 +115,13 @@ const total = computed(() => props.rows.reduce((sum, r) => sum + r.amount, 0));
     >
       <g>
         <template v-for="tick in ticks" :key="tick">
-          <line :x1="M.left" :x2="width - M.right" :y1="yOf(tick * 100)" :y2="yOf(tick * 100)" class="stroke-slate-200" stroke-width="1" />
-          <text :x="M.left - 8" :y="yOf(tick * 100) + 4" text-anchor="end" class="fill-slate-500 text-[11px] tabular-nums">
+          <line :x1="M.left" :x2="width - M.right" :y1="yOf(tick * 100)" :y2="yOf(tick * 100)" class="stroke-stone-200" stroke-width="1" />
+          <text :x="M.left - 8" :y="yOf(tick * 100) + 4" text-anchor="end" class="fill-stone-500 text-[11px] tabular-nums">
             {{ tick === 0 ? '0' : `¥${yuanLabel(tick)}` }}
           </text>
         </template>
       </g>
-      <line :x1="M.left" :x2="width - M.right" :y1="baseline" :y2="baseline" class="stroke-slate-300" stroke-width="1" />
+      <line :x1="M.left" :x2="width - M.right" :y1="baseline" :y2="baseline" class="stroke-stone-300" stroke-width="1" />
 
       <g>
         <template v-for="(row, i) in rows" :key="row.date">
@@ -131,7 +131,7 @@ const total = computed(() => props.rows.reduce((sum, r) => sum + r.amount, 0));
             :y="M.top"
             :width="band"
             :height="innerH"
-            class="fill-slate-100"
+            class="fill-stone-100"
           />
           <path v-if="row.amount > 0" :d="barPath(i, row.amount)" :class="hover === i ? 'fill-blue-700' : 'fill-blue-600'" />
           <text
@@ -139,7 +139,7 @@ const total = computed(() => props.rows.reduce((sum, r) => sum + r.amount, 0));
             :x="dateLabel(i).x"
             :y="HEIGHT - 8"
             :text-anchor="dateLabel(i).anchor"
-            class="fill-slate-500 text-[11px] tabular-nums"
+            class="fill-stone-500 text-[11px] tabular-nums"
           >{{ shortDate(row.date) }}</text>
         </template>
       </g>
@@ -149,16 +149,16 @@ const total = computed(() => props.rows.reduce((sum, r) => sum + r.amount, 0));
         :x="Math.min(Math.max(xOf(peak) + barW / 2, M.left + 24), width - M.right - 24)"
         :y="yOf(rows[peak]?.amount ?? 0) - 6"
         text-anchor="middle"
-        class="fill-slate-700 text-[11px] font-semibold tabular-nums"
+        class="fill-stone-700 text-[11px] font-semibold tabular-nums"
       >{{ money(rows[peak]?.amount ?? 0) }}</text>
     </svg>
 
     <div
       v-if="tip"
-      class="pointer-events-none absolute top-1 z-10 rounded-lg bg-slate-900 px-3 py-2 text-xs leading-5 whitespace-nowrap text-white shadow-lg"
+      class="pointer-events-none absolute top-1 z-10 rounded-lg bg-stone-900 px-3 py-2 text-xs leading-5 whitespace-nowrap text-white shadow-lg"
       :style="{ left: tip.left, transform: tip.alignRight ? 'translateX(-100%)' : tip.alignLeft ? 'none' : 'translateX(-50%)' }"
     >
-      <p class="text-slate-300">{{ tip.row.date }} 周{{ weekday(tip.row.date) }}</p>
+      <p class="text-stone-300">{{ tip.row.date }} 周{{ weekday(tip.row.date) }}</p>
       <p class="font-semibold tabular-nums">{{ money(tip.row.amount) }} · {{ tip.row.orders }} 单</p>
     </div>
   </div>

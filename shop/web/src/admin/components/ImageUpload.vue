@@ -38,14 +38,14 @@ async function pick(event: Event) {
     <div class="flex items-start gap-3">
       <button
         type="button"
-        class="relative flex shrink-0 items-center justify-center overflow-hidden rounded-xl bg-slate-50 text-xs text-slate-400 ring-1 ring-slate-200 transition hover:ring-blue-300"
+        class="relative flex shrink-0 items-center justify-center overflow-hidden rounded-xl bg-stone-50 text-xs text-stone-400 ring-1 ring-stone-200 transition hover:ring-blue-300"
         :class="square ? 'h-24 w-24' : 'h-24 w-40'"
         :disabled="uploading"
         @click="input?.click()"
       >
         <img v-if="props.modelValue" :src="props.modelValue" alt="" class="h-full w-full object-contain" />
         <span v-else>{{ uploading ? '上传中…' : '点击上传' }}</span>
-        <span v-if="uploading && props.modelValue" class="absolute inset-0 flex items-center justify-center bg-white/70 text-slate-600">上传中…</span>
+        <span v-if="uploading && props.modelValue" class="absolute inset-0 flex items-center justify-center bg-white/70 text-stone-600">上传中…</span>
       </button>
       <div class="min-w-0 space-y-2 pt-1">
         <div class="flex gap-2">
@@ -55,13 +55,13 @@ async function pick(event: Event) {
           <button
             v-if="props.modelValue"
             type="button"
-            class="rounded-lg px-3 py-1.5 text-sm font-medium text-slate-500 ring-1 ring-slate-200 hover:bg-slate-50"
+            class="rounded-lg px-3 py-1.5 text-sm font-medium text-stone-500 ring-1 ring-stone-200 hover:bg-stone-50"
             @click="emit('update:modelValue', '')"
           >
             移除
           </button>
         </div>
-        <p v-if="hint" class="text-xs leading-5 text-slate-500">{{ hint }}</p>
+        <p v-if="hint" class="text-xs leading-5 text-stone-500">{{ hint }}</p>
       </div>
     </div>
     <input ref="input" type="file" accept="image/png,image/jpeg,image/gif,image/webp" class="hidden" @change="pick" />

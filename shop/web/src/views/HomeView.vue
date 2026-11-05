@@ -24,6 +24,7 @@ const categories = computed(() => {
   const used = new Set(products.value.map((p) => p.category_id));
   return (shopState.shop?.categories ?? []).filter((c) => used.has(c.id));
 });
+const tabs = computed(() => [{ id: 0, name: '全部' }, ...categories.value]);
 
 const visible = computed(() =>
   activeCategory.value ? products.value.filter((p) => p.category_id === activeCategory.value) : products.value,
@@ -46,57 +47,46 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="space-y-4 sm:space-y-5">
-    <section v-if="shopState.shop?.notice" class="card overflow-hidden">
-      <div class="flex items-center gap-2 border-b border-slate-100 bg-amber-50/60 px-4 py-2.5">
-        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" class="h-4 w-4 text-amber-600" aria-hidden="true">
-          <path d="M3.5 8.5v3h2.5l5 3.5v-10L6 8.5H3.5Z" stroke-linejoin="round" />
-          <path d="M14 7.5a3.5 3.5 0 0 1 0 5" stroke-linecap="round" />
-        </svg>
-        <h2 class="text-sm font-semibold text-amber-800">店铺公告</h2>
-      </div>
-      <HtmlContent :html="shopState.shop.notice" class="px-4 py-3 text-sm leading-6" />
+  <div class="space-y-8 sm:space-y-10">
+    <section v-if="shopState.shop?.notice" class="rounded-3xl bg-sand/70 px-5 py-5 sm:px-8 sm:py-7">
+      <p class="mb-2 flex items-center gap-2 text-xs font-medium tracking-[0.2em] text-stone-500">
+        <span class="h-1.5 w-1.5 rounded-full bg-accent" aria-hidden="true" />公告
+      </p>
+      <HtmlContent :html="shopState.shop.notice" class="text-[15px] leading-7 text-stone-700 [&_p]:my-0.5" />
     </section>
 
-    <nav v-if="categories.length > 1" class="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0" aria-label="商品分类">
-      <div class="flex w-max gap-2">
-        <button
-          type="button"
-          class="rounded-full px-4 py-1.5 text-sm font-medium ring-1 ring-inset transition"
-          :class="activeCategory === 0 ? 'bg-slate-900 text-white ring-slate-900' : 'bg-white text-slate-600 ring-slate-200 hover:bg-slate-100'"
-          @click="pick(0)"
-        >
-          全部
-        </button>
-        <button
-          v-for="category in categories"
-          :key="category.id"
-          type="button"
-          class="rounded-full px-4 py-1.5 text-sm font-medium ring-1 ring-inset transition"
-          :class="activeCategory === category.id ? 'bg-slate-900 text-white ring-slate-900' : 'bg-white text-slate-600 ring-slate-200 hover:bg-slate-100'"
-          @click="pick(category.id)"
-        >
-          {{ category.name }}
-        </button>
-      </div>
-    </nav>
+    <section class="space-y-5">
+      <nav v-if="categories.length > 1" class="-mx-5 overflow-x-auto px-5 [scrollbar-width:none] sm:mx-0 sm:px-0 [&::-webkit-scrollbar]:hidden" aria-label="商品分类">
+        <div class="flex w-max gap-1">
+          <button
+            v-for="tab in tabs"
+            :key="tab.id"
+            type="button"
+            class="rounded-full px-4 py-2 text-sm transition"
+            :class="activeCategory === tab.id ? 'bg-stone-900 text-white' : 'text-stone-500 hover:bg-white hover:text-stone-900'"
+            :aria-pressed="activeCategory === tab.id"
+            @click="pick(tab.id)"
+          >
+            {{ tab.name }}
+          </button>
+        </div>
+      </nav>
 
-    <p v-if="error" class="card p-6 text-center text-sm text-rose-600">{{ error }}</p>
+      <p v-if="error" class="py-16 text-center text-sm text-rose-600">{{ error }}</p>
 
-    <div v-else-if="loading" class="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4">
-      <div v-for="n in 8" :key="n" class="card overflow-hidden">
-        <div class="aspect-square animate-pulse bg-slate-100" />
-        <div class="space-y-2 p-3">
-          <div class="h-4 animate-pulse rounded bg-slate-100" />
-          <div class="h-4 w-1/2 animate-pulse rounded bg-slate-100" />
+      <div v-else-if="loading" class="grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-3 sm:gap-x-6 lg:grid-cols-4">
+        <div v-for="n in 8" :key="n">
+          <div class="aspect-square animate-pulse rounded-3xl bg-stone-200/60" />
+          <div class="mt-3 h-4 w-4/5 animate-pulse rounded-full bg-stone-200/60" />
+          <div class="mt-2 h-4 w-1/3 animate-pulse rounded-full bg-stone-200/60" />
         </div>
       </div>
-    </div>
 
-    <p v-else-if="visible.length === 0" class="card p-10 text-center text-sm text-slate-500">这里暂时没有商品</p>
+      <p v-else-if="visible.length === 0" class="py-16 text-center text-sm text-stone-400">这里暂时没有商品</p>
 
-    <div v-else class="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4">
-      <ProductCard v-for="product in visible" :key="product.id" :product="product" />
-    </div>
+      <div v-else class="grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-3 sm:gap-x-6 lg:grid-cols-4">
+        <ProductCard v-for="product in visible" :key="product.id" :product="product" />
+      </div>
+    </section>
   </div>
 </template>

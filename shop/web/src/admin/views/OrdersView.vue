@@ -165,11 +165,11 @@ function clearFilters() {
         :key="item.key"
         type="button"
         class="rounded-full px-3.5 py-1.5 text-sm font-medium ring-1 ring-inset transition"
-        :class="tab === item.key ? 'bg-slate-900 text-white ring-slate-900' : 'bg-white text-slate-600 ring-slate-200 hover:bg-slate-100'"
+        :class="tab === item.key ? 'bg-stone-900 text-white ring-stone-900' : 'bg-white text-stone-600 ring-stone-200 hover:bg-stone-100'"
         @click="tab = item.key"
       >
         {{ item.label }}
-        <span class="ml-0.5 tabular-nums" :class="tab === item.key ? 'text-slate-300' : 'text-slate-400'">{{ countFor(item.key) }}</span>
+        <span class="ml-0.5 tabular-nums" :class="tab === item.key ? 'text-stone-300' : 'text-stone-400'">{{ countFor(item.key) }}</span>
       </button>
     </div>
 
@@ -177,13 +177,13 @@ function clearFilters() {
       <input v-model="q" type="search" placeholder="搜索手机号或订单号" class="input h-10 sm:max-w-xs" />
       <div class="flex items-center gap-2">
         <input v-model="from" type="date" class="input h-10 min-w-0 flex-1 px-2 text-sm sm:w-40 sm:flex-none" aria-label="开始日期" />
-        <span class="text-slate-400">–</span>
+        <span class="text-stone-400">–</span>
         <input v-model="to" type="date" class="input h-10 min-w-0 flex-1 px-2 text-sm sm:w-40 sm:flex-none" aria-label="结束日期" />
       </div>
       <button v-if="hasFilters" type="button" class="text-sm text-blue-600 sm:ml-1" @click="clearFilters">清除筛选</button>
     </div>
 
-    <p v-if="!loading && items.length === 0" class="card p-10 text-center text-sm text-slate-500">
+    <p v-if="!loading && items.length === 0" class="card p-10 text-center text-sm text-stone-500">
       {{ hasFilters ? '没有符合条件的订单' : tab === 'paid' ? '没有要办理的订单' : tab === 'pending' ? '没有待付款的订单' : '暂无订单' }}
     </p>
 
@@ -191,28 +191,28 @@ function clearFilters() {
       <li v-for="order in items" :key="order.id">
         <article class="card p-4" :class="{ 'ring-2 ring-amber-300': order.status === 'paid' }">
           <div class="flex flex-wrap items-center gap-x-2 gap-y-1">
-            <span class="font-mono text-[15px] font-semibold tracking-wide text-slate-900">{{ order.order_no }}</span>
+            <span class="font-mono text-[15px] font-semibold tracking-wide text-stone-900">{{ order.order_no }}</span>
             <CopyButton :text="order.order_no" />
             <StatusBadge :status="order.status" />
-            <span class="ml-auto text-xs text-slate-400">{{ formatTime(order.created_at) }}</span>
+            <span class="ml-auto text-xs text-stone-400">{{ formatTime(order.created_at) }}</span>
           </div>
 
           <div class="mt-3 grid gap-x-6 gap-y-1.5 text-sm sm:grid-cols-[1fr_auto]">
-            <p class="text-slate-900">{{ order.product_name }} <span class="text-slate-500">× {{ order.quantity }}</span></p>
+            <p class="text-stone-900">{{ order.product_name }} <span class="text-stone-500">× {{ order.quantity }}</span></p>
             <p class="sm:text-right">
-              <span class="text-lg font-bold text-slate-900 tabular-nums">¥{{ yuanExact(order.amount) }}</span>
+              <span class="text-lg font-bold text-stone-900 tabular-nums">¥{{ yuanExact(order.amount) }}</span>
               <span class="ml-1.5 font-medium" :class="order.pay_method === 'wechat' ? 'text-wechat' : 'text-alipay'">{{ PAY_TEXT[order.pay_method] }}</span>
             </p>
-            <p class="flex items-center gap-2 text-slate-500">
-              手机号 <span class="font-medium text-slate-900 tabular-nums">{{ order.phone }}</span>
+            <p class="flex items-center gap-2 text-stone-500">
+              手机号 <span class="font-medium text-stone-900 tabular-nums">{{ order.phone }}</span>
               <CopyButton :text="order.phone" />
             </p>
-            <p v-if="order.paid_at" class="text-slate-500 sm:text-right">付款 {{ formatTime(order.paid_at) }}</p>
+            <p v-if="order.paid_at" class="text-stone-500 sm:text-right">付款 {{ formatTime(order.paid_at) }}</p>
             <p v-else-if="order.status === 'pending'" class="text-amber-700 sm:text-right">{{ formatTime(order.expire_at) }} 前未付款会自动取消</p>
-            <p v-else-if="order.cancelled_at" class="text-slate-500 sm:text-right">取消于 {{ formatTime(order.cancelled_at) }}</p>
+            <p v-else-if="order.cancelled_at" class="text-stone-500 sm:text-right">取消于 {{ formatTime(order.cancelled_at) }}</p>
           </div>
 
-          <p v-if="order.cards.length" class="mt-2 text-xs leading-5 break-all text-slate-500">已发卡密：{{ order.cards.join('、') }}</p>
+          <p v-if="order.cards.length" class="mt-2 text-xs leading-5 break-all text-stone-500">已发卡密：{{ order.cards.join('、') }}</p>
 
           <div v-if="noteId === order.id" class="mt-3 flex gap-2">
             <input
@@ -227,9 +227,9 @@ function clearFilters() {
             <button type="button" class="btn-primary h-10 shrink-0 px-4 text-sm" :disabled="busyId === order.id" @click="saveNote(order)">保存</button>
             <button type="button" class="btn-secondary h-10 shrink-0 px-3 text-sm" @click="noteId = null">取消</button>
           </div>
-          <p v-else-if="order.admin_note" class="mt-2 rounded-lg bg-slate-50 px-3 py-2 text-sm text-slate-600">备注：{{ order.admin_note }}</p>
+          <p v-else-if="order.admin_note" class="mt-2 rounded-lg bg-stone-50 px-3 py-2 text-sm text-stone-600">备注：{{ order.admin_note }}</p>
 
-          <div class="mt-3 flex flex-wrap gap-2 border-t border-slate-100 pt-3">
+          <div class="mt-3 flex flex-wrap gap-2 border-t border-stone-100 pt-3">
             <button
               v-if="order.status === 'pending' || order.status === 'cancelled'"
               type="button"

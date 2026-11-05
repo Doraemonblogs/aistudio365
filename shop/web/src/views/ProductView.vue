@@ -25,6 +25,11 @@ const soldOut = computed(() => !product.value || product.value.stock_status === 
 const total = computed(() => (product.value ? product.value.price * quantity.value : 0));
 const phoneInvalid = computed(() => phoneTouched.value && phone.value.trim() !== '' && !normalizePhone(phone.value));
 
+const methods = [
+  { key: 'wechat', label: '微信', dot: 'bg-wechat', ring: 'ring-wechat' },
+  { key: 'alipay', label: '支付宝', dot: 'bg-alipay', ring: 'ring-alipay' },
+] as const;
+
 watch(
   () => props.id,
   async (id) => {
@@ -75,67 +80,69 @@ async function submit() {
 
 <template>
   <div>
-    <RouterLink to="/" class="mb-3 inline-flex items-center gap-1 text-sm text-slate-500 hover:text-slate-800">
+    <RouterLink to="/" class="-ml-2 mb-4 inline-flex items-center gap-1 rounded-full px-2 py-1 text-sm text-stone-500 transition hover:text-stone-900">
       <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" class="h-4 w-4" aria-hidden="true">
         <path d="M12 5l-5 5 5 5" stroke-linecap="round" stroke-linejoin="round" />
       </svg>
       全部商品
     </RouterLink>
 
-    <div v-if="loadError" class="card p-10 text-center">
-      <p class="text-slate-600">{{ loadError }}</p>
-      <RouterLink to="/" class="btn-secondary mt-4">返回首页</RouterLink>
+    <div v-if="loadError" class="py-20 text-center">
+      <p class="text-stone-500">{{ loadError }}</p>
+      <RouterLink to="/" class="btn-secondary mt-5">返回首页</RouterLink>
     </div>
 
-    <div v-else-if="!product" class="grid gap-4 md:grid-cols-[5fr_6fr]">
-      <div class="card aspect-square animate-pulse" />
-      <div class="card h-80 animate-pulse" />
+    <div v-else-if="!product" class="grid gap-8 md:grid-cols-2 md:gap-12">
+      <div class="aspect-square animate-pulse rounded-3xl bg-stone-200/60" />
+      <div class="space-y-4">
+        <div class="h-7 w-4/5 animate-pulse rounded-full bg-stone-200/60" />
+        <div class="h-9 w-1/3 animate-pulse rounded-full bg-stone-200/60" />
+        <div class="h-72 animate-pulse rounded-3xl bg-stone-200/60" />
+      </div>
     </div>
 
     <template v-else>
-      <div class="grid gap-4 md:grid-cols-[minmax(0,5fr)_minmax(0,6fr)] md:items-start md:gap-6">
-        <div class="card overflow-hidden">
+      <div class="grid gap-8 md:grid-cols-2 md:items-start md:gap-12">
+        <div class="overflow-hidden rounded-3xl bg-white shadow-soft md:sticky md:top-24">
           <img
             v-if="product.image"
             :src="product.image"
             :alt="product.name"
             class="aspect-square w-full object-cover"
-            :class="{ 'opacity-60 grayscale': soldOut }"
+            :class="{ 'opacity-50 grayscale': soldOut }"
           />
         </div>
 
-        <div class="space-y-4">
-          <section class="card p-4 sm:p-5">
-            <h1 class="text-lg leading-7 font-bold text-slate-900 sm:text-xl">{{ product.name }}</h1>
-            <div class="mt-3 flex items-center justify-between gap-3">
-              <PriceTag :price="product.price" :original="product.original_price" large />
-              <StockBadge :status="product.stock_status" />
-            </div>
-            <p v-if="product.summary" class="mt-3 text-sm leading-6 text-slate-500">{{ product.summary }}</p>
-          </section>
+        <div>
+          <h1 class="text-xl leading-8 font-semibold tracking-tight text-stone-900 sm:text-2xl sm:leading-9">{{ product.name }}</h1>
+          <div class="mt-4 flex items-end justify-between gap-3">
+            <PriceTag :price="product.price" :original="product.original_price" large />
+            <StockBadge :status="product.stock_status" />
+          </div>
+          <p v-if="product.summary" class="mt-4 text-[15px] leading-7 text-stone-500">{{ product.summary }}</p>
 
-          <form class="card space-y-5 p-4 sm:p-5" novalidate @submit.prevent="submit">
-            <div>
-              <span class="label">购买数量</span>
+          <form class="card mt-7 space-y-6 p-5 sm:p-6" novalidate @submit.prevent="submit">
+            <div class="flex items-center justify-between gap-3">
+              <span class="text-sm text-stone-500">数量</span>
               <div class="flex items-center gap-3">
-                <div class="inline-flex items-center rounded-xl ring-1 ring-slate-300">
+                <span v-if="!soldOut" class="text-xs text-stone-400">最多 {{ product.max_qty }} 件</span>
+                <div class="inline-flex items-center rounded-full bg-stone-100 p-1">
                   <button
                     type="button"
-                    class="h-10 w-10 text-lg text-slate-600 disabled:text-slate-300"
+                    class="flex h-8 w-8 items-center justify-center rounded-full text-lg text-stone-600 transition hover:bg-white disabled:text-stone-300 disabled:hover:bg-transparent"
                     :disabled="soldOut || quantity <= 1"
                     aria-label="减少"
                     @click="changeQuantity(-1)"
                   >−</button>
-                  <span class="w-10 text-center font-semibold text-slate-900 tabular-nums">{{ quantity }}</span>
+                  <span class="w-9 text-center font-semibold text-stone-900 tabular-nums">{{ quantity }}</span>
                   <button
                     type="button"
-                    class="h-10 w-10 text-lg text-slate-600 disabled:text-slate-300"
+                    class="flex h-8 w-8 items-center justify-center rounded-full text-lg text-stone-600 transition hover:bg-white disabled:text-stone-300 disabled:hover:bg-transparent"
                     :disabled="soldOut || quantity >= product.max_qty"
                     aria-label="增加"
                     @click="changeQuantity(1)"
                   >+</button>
                 </div>
-                <span v-if="!soldOut" class="text-xs text-slate-400">每单最多 {{ product.max_qty }} 件</span>
               </div>
             </div>
 
@@ -148,61 +155,55 @@ async function submit() {
                 inputmode="numeric"
                 autocomplete="tel"
                 maxlength="16"
-                placeholder="用于查询订单，客服也会核对"
-                class="input"
-                :class="{ 'border-rose-400 focus:border-rose-400 focus:ring-rose-100': phoneInvalid }"
+                placeholder="用来查订单，不会公开"
+                class="input bg-stone-50 focus:bg-white"
+                :class="{ 'border-rose-300 focus:border-rose-400 focus:ring-rose-100': phoneInvalid }"
                 @blur="phoneTouched = true"
               />
               <p v-if="phoneInvalid" class="mt-1.5 text-xs text-rose-600">请输入正确的 11 位手机号</p>
             </div>
 
             <div>
-              <span class="label">支付方式</span>
-              <div class="grid grid-cols-2 gap-3" role="radiogroup" aria-label="支付方式">
+              <span class="label">付款方式</span>
+              <div class="grid grid-cols-2 gap-3" role="radiogroup" aria-label="付款方式">
                 <button
+                  v-for="method in methods"
+                  :key="method.key"
                   type="button"
                   role="radio"
-                  :aria-checked="payMethod === 'wechat'"
-                  class="flex h-12 items-center justify-center gap-2 rounded-xl text-[15px] font-semibold ring-1 ring-inset transition"
-                  :class="payMethod === 'wechat' ? 'bg-wechat/10 text-wechat ring-2 ring-wechat' : 'bg-white text-slate-600 ring-slate-300 hover:bg-slate-50'"
-                  @click="payMethod = 'wechat'"
+                  :aria-checked="payMethod === method.key"
+                  class="flex h-12 items-center justify-center gap-2 rounded-2xl text-[15px] transition"
+                  :class="payMethod === method.key ? `bg-white font-semibold text-stone-900 ring-2 ${method.ring}` : 'bg-stone-100 text-stone-500 hover:text-stone-800'"
+                  @click="payMethod = method.key"
                 >
-                  <span class="h-2.5 w-2.5 rounded-full bg-wechat" aria-hidden="true" />
-                  微信
-                </button>
-                <button
-                  type="button"
-                  role="radio"
-                  :aria-checked="payMethod === 'alipay'"
-                  class="flex h-12 items-center justify-center gap-2 rounded-xl text-[15px] font-semibold ring-1 ring-inset transition"
-                  :class="payMethod === 'alipay' ? 'bg-alipay/10 text-alipay ring-2 ring-alipay' : 'bg-white text-slate-600 ring-slate-300 hover:bg-slate-50'"
-                  @click="payMethod = 'alipay'"
-                >
-                  <span class="h-2.5 w-2.5 rounded-full bg-alipay" aria-hidden="true" />
-                  支付宝
+                  <span class="h-2.5 w-2.5 rounded-full" :class="method.dot" aria-hidden="true" />
+                  {{ method.label }}
                 </button>
               </div>
             </div>
 
-            <div class="flex items-center justify-between border-t border-slate-100 pt-4">
-              <span class="text-sm text-slate-500">应付</span>
-              <span class="text-2xl font-bold tracking-tight text-rose-600">
-                <span class="mr-px text-base">¥</span>{{ yuanShort(total) }}
-              </span>
+            <p v-if="formError" class="rounded-2xl bg-rose-50 px-4 py-2.5 text-sm text-rose-700" role="alert">{{ formError }}</p>
+
+            <div class="flex items-center gap-4 pt-1">
+              <div class="min-w-0 flex-1">
+                <p class="text-xs text-stone-400">应付</p>
+                <p class="text-2xl font-semibold tracking-tight text-stone-900 tabular-nums">
+                  <span class="mr-0.5 text-base font-medium">¥</span>{{ yuanShort(total) }}
+                </p>
+              </div>
+              <button type="submit" class="btn-primary h-12 flex-1 text-base" :disabled="soldOut || submitting">
+                {{ soldOut ? '已售罄' : submitting ? '正在下单…' : '去付款' }}
+              </button>
             </div>
-
-            <p v-if="formError" class="rounded-xl bg-rose-50 px-3 py-2 text-sm text-rose-700" role="alert">{{ formError }}</p>
-
-            <button type="submit" class="btn-primary h-12 w-full text-base" :disabled="soldOut || submitting">
-              {{ soldOut ? '已售罄' : submitting ? '正在下单…' : '去付款' }}
-            </button>
           </form>
         </div>
       </div>
 
-      <section v-if="product.description" class="card mt-4 p-4 sm:mt-6 sm:p-6">
-        <h2 class="mb-2 text-base font-semibold text-slate-900">商品详情</h2>
-        <HtmlContent :html="product.description" />
+      <section v-if="product.description" class="mt-12 max-w-3xl sm:mt-16">
+        <h2 class="mb-3 flex items-center gap-2 text-xs font-medium tracking-[0.2em] text-stone-500">
+          <span class="h-1.5 w-1.5 rounded-full bg-accent" aria-hidden="true" />商品详情
+        </h2>
+        <HtmlContent :html="product.description" class="text-stone-700" />
       </section>
     </template>
   </div>

@@ -38,20 +38,20 @@ async function submit() {
 
 <template>
   <div class="mx-auto max-w-md">
-    <RouterLink to="/admin/settings" class="mb-3 inline-flex items-center gap-1 text-sm text-slate-500 hover:text-slate-800">
+    <RouterLink to="/admin/settings" class="mb-3 inline-flex items-center gap-1 text-sm text-stone-500 hover:text-stone-800">
       <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" class="h-4 w-4" aria-hidden="true">
         <path d="M12 5l-5 5 5 5" stroke-linecap="round" stroke-linejoin="round" />
       </svg>
       设置
     </RouterLink>
     <form class="card space-y-4 p-5" novalidate @submit.prevent="submit">
-      <h1 class="text-lg font-bold text-slate-900">修改密码</h1>
+      <h1 class="text-lg font-bold text-stone-900">修改密码</h1>
       <div>
         <label for="current" class="label">当前密码</label>
         <input id="current" v-model="current" type="password" class="input" autocomplete="current-password" />
       </div>
       <div>
-        <label for="next" class="label">新密码 <span class="font-normal text-slate-400">至少 8 位</span></label>
+        <label for="next" class="label">新密码 <span class="font-normal text-stone-400">至少 8 位</span></label>
         <input id="next" v-model="next" type="password" class="input" autocomplete="new-password" />
       </div>
       <div>

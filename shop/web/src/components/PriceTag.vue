@@ -8,11 +8,11 @@ withDefaults(defineProps<{ price: number; original?: number | null; large?: bool
 </script>
 
 <template>
-  <span class="flex flex-wrap items-baseline gap-x-1.5">
-    <span class="font-bold tracking-tight text-rose-600" :class="large ? 'text-3xl' : 'text-lg leading-6'">
-      <span class="mr-px font-semibold" :class="large ? 'text-lg' : 'text-xs'">¥</span>{{ yuanShort(price) }}
+  <span class="flex flex-wrap items-baseline gap-x-2">
+    <span class="font-semibold tracking-tight text-accent tabular-nums" :class="large ? 'text-[34px] leading-none' : 'text-lg leading-6'">
+      <span class="mr-0.5 font-medium" :class="large ? 'text-lg' : 'text-xs'">¥</span>{{ yuanShort(price) }}
     </span>
-    <span v-if="original && original > price" class="text-slate-400 line-through" :class="large ? 'text-sm' : 'text-xs'">
+    <span v-if="original && original > price" class="text-stone-400 line-through" :class="large ? 'text-sm' : 'text-xs'">
       ¥{{ yuanShort(original) }}
     </span>
   </span>
