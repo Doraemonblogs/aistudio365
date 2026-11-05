@@ -21,7 +21,7 @@ Node.js 24 + TypeScript 6 + Fastify + SQLite (better-sqlite3); Vue 3 + Vite + Ta
 | `web/src/admin/` | Admin pages at `/admin`: orders, products and cards, stats, settings, password |
 | `server/src/cli/` | Admin password reset; compiled into the image, so it also runs in production |
 | `scripts/` | Dujiao-Next export/import, product listing |
-| `Dockerfile`, `deploy/` | Production image, compose file, deploy and nginx switch scripts; see `deploy/README.md` |
+| `Dockerfile`, `deploy/` | Production image, compose file and deploy scripts; see `deploy/README.md` |
 | `scripts/dev/` | `sync.cmd` copies the source to the server; `run.sh` runs a command there in Docker |
 | `tests/` | Vitest tests |
 | `data/` (not in git) | `shop.db`, `uploads/`, import exports |
@@ -56,4 +56,7 @@ Useful commands (inside that container):
 | `npm run products:list` | Print products and shop settings |
 | `npm run admin:password -- [username] [--out file]` | Create the admin or reset its password |
 
-Export from the live Dujiao-Next (read-only), on the server: `python3 scripts/export-dujiao.py data/import`.
+The Dujiao-Next import was a one-off and is done. Dujiao-Next has since been removed from the
+server; to export from it again, unpack its archive (see `deploy/README.md`) back to
+`/opt/dujiao-next` and `/var/www/aistudio365-cashier` and run
+`python3 scripts/export-dujiao.py data/import` there.

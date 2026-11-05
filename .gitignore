@@ -9,7 +9,8 @@ shop/data/
 *.db-wal
 *.db-shm
 
-# Personal payment QR codes are shown on the site but kept out of git
+# Local copies of the personal payment QR codes; kept out of git. The live shop serves its own
+# copies from shop/data/uploads on the server.
 cashier/qr/*.png
 cashier/qr/*.jpg
 cashier/qr/*.webp

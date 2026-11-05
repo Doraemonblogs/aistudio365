@@ -28,15 +28,18 @@ Roll back the code to the previous release:
 ssh root@23.246.154.136 "cd /opt/aistudio365-shop && docker compose -f src.prev/deploy/compose.yml up -d --build"
 ```
 
-## Switch the domain between the new shop and Dujiao-Next
+## nginx
 
-```powershell
-ssh root@23.246.154.136 "bash /opt/aistudio365-shop/src/deploy/nginx-switch.sh shop"
-ssh root@23.246.154.136 "bash /opt/aistudio365-shop/src/deploy/nginx-switch.sh dujiao"
-```
+The site file has one `location /` that proxies to `127.0.0.1:18082`, plus the HTTPS lines certbot
+manages. After editing it, run `nginx -t` before `systemctl reload nginx`.
 
-The script saves the old nginx file under `/root/nginx-aistudio365.<time>.bak`, changes only the
-`proxy_pass` port, and restores the file if `nginx -t` fails.
+## The earlier Dujiao-Next shop
+
+Dujiao-Next served the domain until 2026-11-05 and was removed from the server that day. Its
+containers, images and files are gone. Everything it had (database, uploads, `.env`, config, the
+old static cashier with its QR codes, and the nginx file as it was) is in the root-only archive
+`/root/dujiao-next-retired-20261104-194522.tar.gz`. Its deploy scripts are in git history before
+the commit that removed the `deploy/`, `cashier/`, `migration/` and `storefront/` folders.
 
 ## Admin password
 
