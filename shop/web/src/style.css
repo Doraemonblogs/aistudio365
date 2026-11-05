@@ -59,4 +59,25 @@ body {
   .rich b {
     @apply font-semibold text-slate-900;
   }
+  .rich h1,
+  .rich h2,
+  .rich h3,
+  .rich h4 {
+    @apply mt-3 mb-1.5 text-base font-semibold text-slate-900;
+  }
+  .rich h1 {
+    @apply text-lg;
+  }
+  .rich li > p {
+    @apply my-0;
+  }
+  .rich hr {
+    @apply my-3 border-slate-200;
+  }
+  .rich blockquote {
+    @apply my-2 border-l-4 border-slate-200 pl-3 text-slate-500;
+  }
+  .rich code {
+    @apply rounded bg-slate-100 px-1 text-[13px];
+  }
 }

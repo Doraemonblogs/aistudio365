@@ -4,7 +4,7 @@ import { onBeforeRouteLeave, useRouter } from 'vue-router';
 import { errorMessage, formatTime } from '../../format';
 import { adminApi, type AdminCard, type AdminCategory, type AdminProduct, type ProductInput } from '../api';
 import ImageUpload from '../components/ImageUpload.vue';
-import RichTextField from '../components/RichTextField.vue';
+import MarkdownField from '../components/MarkdownField.vue';
 import { askConfirm, toast } from '../state';
 import { centsToYuan, yuanToCents } from '../text';
 
@@ -171,6 +171,10 @@ function validate(): ProductInput | null {
 }
 
 async function save() {
+  if (!isNew.value && !dirty.value) {
+    toast('没有修改，不用保存');
+    return;
+  }
   const input = validate();
   if (!input) return;
   saving.value = true;
@@ -479,13 +483,13 @@ const fieldClass = (key: keyof Form) => (errors.value[key] ? 'border-rose-400 fo
       <!-- Content -->
       <section class="card space-y-5 p-4 sm:p-5">
         <h2 class="text-base font-semibold text-slate-900">说明</h2>
-        <RichTextField v-model="form.description" label="商品详情" :rows="8" placeholder="商品页下方显示的详细介绍" />
-        <RichTextField
+        <MarkdownField v-model="form.description" label="商品详情" :rows="8" placeholder="商品页下方显示的详细介绍" />
+        <MarkdownField
           v-model="form.instructions"
           label="使用说明"
           :rows="4"
-          placeholder="选填，付款确认后显示在订单页"
-          hint="付款确认后才显示给买家。一行一段，也可以写 HTML。"
+          placeholder="选填，买家付款后显示在订单页"
+          hint="买家付款后才显示在订单页。"
         />
       </section>
 
@@ -496,6 +500,14 @@ const fieldClass = (key: keyof Form) => (errors.value[key] ? 'border-rose-400 fo
           <p class="mt-0.5 text-xs leading-5 text-slate-500">
             按这个商品的售价生成的收款码。买 1 件时用它，买家扫码不用输金额；买多件或没设置时，用“设置”里的通用收款码。改了售价记得换码。
           </p>
+          <details class="mt-1.5 text-xs leading-5 text-slate-500">
+            <summary class="cursor-pointer text-blue-600">怎么生成固定金额收款码？</summary>
+            <ul class="mt-1 list-disc space-y-0.5 pl-4">
+              <li>微信：我 → 服务 → 收付款 → 二维码收款 → 设置金额，填售价后保存收款码图片</li>
+              <li>支付宝：首页「收钱」→ 设置金额，填售价后保存图片</li>
+              <li>把保存的图片传到下面对应的位置。菜单名称随 App 版本可能略有不同</li>
+            </ul>
+          </details>
         </div>
         <div class="grid gap-4 sm:grid-cols-2">
           <ImageUpload v-model="form.qr_wechat" label="微信" />
@@ -513,7 +525,7 @@ const fieldClass = (key: keyof Form) => (errors.value[key] ? 'border-rose-400 fo
           <span v-if="dirty" class="mr-auto text-sm text-amber-700">有修改未保存</span>
           <span v-else-if="!isNew" class="mr-auto text-sm text-slate-400">已保存</span>
           <RouterLink to="/admin/products" class="btn-secondary h-10 px-4 text-sm">返回</RouterLink>
-          <button type="submit" class="btn-primary h-10 px-6 text-sm" :disabled="saving || (!isNew && !dirty)">
+          <button type="submit" class="btn-primary h-10 px-6 text-sm" :disabled="saving">
             {{ saving ? '保存中…' : isNew ? '创建商品' : '保存' }}
           </button>
         </div>

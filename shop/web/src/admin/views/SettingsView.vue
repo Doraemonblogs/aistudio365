@@ -4,7 +4,7 @@ import { onBeforeRouteLeave } from 'vue-router';
 import { errorMessage } from '../../format';
 import { adminApi, type ShopSettings } from '../api';
 import ImageUpload from '../components/ImageUpload.vue';
-import RichTextField from '../components/RichTextField.vue';
+import MarkdownField from '../components/MarkdownField.vue';
 import { adminState, askConfirm, toast } from '../state';
 
 const form = reactive({
@@ -42,6 +42,10 @@ onMounted(async () => {
 
 async function save() {
   error.value = '';
+  if (!dirty.value) {
+    toast('没有修改，不用保存');
+    return;
+  }
   const timeout = Number(form.order_timeout_minutes);
   if (!form.shop_name.trim()) {
     error.value = '请填写店铺名称';
@@ -91,7 +95,7 @@ onBeforeUnmount(() => window.removeEventListener('beforeunload', beforeUnload));
           <input id="shop-name" v-model="form.shop_name" class="input" maxlength="60" />
         </div>
         <ImageUpload v-model="form.logo" label="店铺 Logo" hint="显示在商店左上角，正方形效果最好。" />
-        <RichTextField v-model="form.notice" label="首页公告" :rows="4" placeholder="选填，显示在商店首页顶部" />
+        <MarkdownField v-model="form.notice" label="首页公告" :rows="4" placeholder="选填，显示在商店首页顶部" />
       </section>
 
       <section class="card space-y-4 p-4 sm:p-5">
@@ -146,7 +150,8 @@ onBeforeUnmount(() => window.removeEventListener('beforeunload', beforeUnload));
         <div class="flex items-center justify-end gap-3">
           <span v-if="error" class="mr-auto text-sm text-rose-600" role="alert">{{ error }}</span>
           <span v-else-if="dirty" class="mr-auto text-sm text-amber-700">有修改未保存</span>
-          <button type="submit" class="btn-primary h-10 px-6 text-sm" :disabled="saving || !dirty">{{ saving ? '保存中…' : '保存设置' }}</button>
+          <span v-else class="mr-auto text-sm text-slate-400">改完点保存</span>
+          <button type="submit" class="btn-primary h-10 px-6 text-sm" :disabled="saving">{{ saving ? '保存中…' : '保存设置' }}</button>
         </div>
       </div>
     </form>
