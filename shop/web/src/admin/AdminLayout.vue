@@ -11,6 +11,7 @@ const router = useRouter();
 const links = [
   { to: '/admin/orders', label: '订单' },
   { to: '/admin/products', label: '商品' },
+  { to: '/admin/marketing', label: '营销' },
   { to: '/admin/stats', label: '统计' },
   { to: '/admin/settings', label: '设置' },
 ];

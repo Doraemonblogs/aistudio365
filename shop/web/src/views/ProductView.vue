@@ -1,11 +1,21 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
-import { api, type PayMethod, type ProductDetail } from '../api';
+import { api, type BuyerCoupon, type CouponQuote, type PayMethod, type ProductDetail } from '../api';
 import HtmlContent from '../components/HtmlContent.vue';
 import PriceTag from '../components/PriceTag.vue';
 import StockBadge from '../components/StockBadge.vue';
-import { errorMessage, normalizePhone, rememberedPhone, rememberPhone, setTitle, yuanShort } from '../format';
+import {
+  couponCondition,
+  couponDates,
+  couponText,
+  errorMessage,
+  normalizePhone,
+  rememberedPhone,
+  rememberPhone,
+  setTitle,
+  yuanShort,
+} from '../format';
 import { shopState } from '../shop';
 
 const props = defineProps<{ id: string }>();
@@ -30,12 +40,81 @@ const methods = [
   { key: 'alipay', label: '支付宝', dot: 'bg-alipay', ring: 'ring-alipay' },
 ] as const;
 
+// ---- coupon ----
+const coupon = ref<CouponQuote | null>(null);
+const couponOpen = ref(false);
+const couponInput = ref('');
+const couponError = ref('');
+const checkingCoupon = ref(false);
+const myCoupons = ref<BuyerCoupon[]>([]);
+const validPhone = computed(() => normalizePhone(phone.value));
+
+/** Coupons given to this phone that fit this product, other than the one in use. */
+const usableMine = computed(() =>
+  myCoupons.value.filter(
+    (c) => c.code !== coupon.value?.code && (c.product_ids.length === 0 || c.product_ids.includes(product.value?.id ?? 0)),
+  ),
+);
+// Worked out here so the total follows the quantity at once; the server checks it again on order.
+const discount = computed(() => {
+  const c = coupon.value;
+  if (!c || total.value < c.min_amount) return 0;
+  return c.kind === 'amount' ? Math.min(c.value, total.value) : total.value - Math.round((total.value * c.value) / 100);
+});
+const payable = computed(() => total.value - discount.value);
+
+async function applyCoupon(code = couponInput.value, quiet = false) {
+  if (!product.value) return;
+  if (!code.trim()) {
+    couponError.value = '请输入券码';
+    return;
+  }
+  checkingCoupon.value = true;
+  couponError.value = '';
+  try {
+    coupon.value = await api.checkCoupon({
+      code: code.trim(),
+      product_id: product.value.id,
+      quantity: quantity.value,
+      phone: validPhone.value ?? undefined,
+    });
+    couponInput.value = '';
+    couponOpen.value = false;
+  } catch (e) {
+    if (quiet) coupon.value = null;
+    couponError.value = errorMessage(e);
+  } finally {
+    checkingCoupon.value = false;
+  }
+}
+
+function removeCoupon() {
+  coupon.value = null;
+  couponError.value = '';
+}
+
+// A threshold or a phone-only coupon may stop fitting when the quantity or phone changes.
+let recheck: ReturnType<typeof setTimeout> | undefined;
+watch([quantity, validPhone], () => {
+  clearTimeout(recheck);
+  if (coupon.value) recheck = setTimeout(() => void applyCoupon(coupon.value!.code, true), 400);
+});
+
+watch(
+  validPhone,
+  async (p) => {
+    myCoupons.value = p ? await api.myCoupons(p).catch(() => []) : [];
+  },
+  { immediate: true },
+);
+
 watch(
   () => props.id,
   async (id) => {
     product.value = null;
     loadError.value = '';
     quantity.value = 1;
+    removeCoupon();
     try {
       product.value = await api.product(Number(id));
       setTitle(product.value.name, shopState.shop?.shop_name);
@@ -67,6 +146,7 @@ async function submit() {
       quantity: quantity.value,
       phone: normalized,
       pay_method: payMethod.value,
+      coupon_code: coupon.value?.code,
     });
     rememberPhone(normalized);
     await router.push(`/pay/${order.order_no}`);
@@ -193,13 +273,73 @@ async function submit() {
             </div>
           </div>
 
+          <div v-if="!soldOut">
+            <div class="flex items-center justify-between gap-3">
+              <span class="text-sm text-stone-500">优惠券</span>
+              <button
+                v-if="!coupon && !couponOpen"
+                type="button"
+                class="text-sm text-stone-500 transition hover:text-stone-900"
+                @click="couponOpen = true"
+              >
+                <span v-if="usableMine.length" class="font-medium text-accent">你有 {{ usableMine.length }} 张可用 · </span>输入券码
+              </button>
+            </div>
+
+            <div v-if="coupon" class="mt-2.5 flex items-center gap-3 rounded-2xl bg-accent/5 px-4 py-3 ring-1 ring-accent/20 ring-inset">
+              <div class="min-w-0 flex-1">
+                <p class="text-[15px] font-semibold text-accent">
+                  {{ couponText(coupon) }}<span v-if="discount" class="ml-2 text-sm font-medium">省 ¥{{ yuanShort(discount) }}</span>
+                </p>
+                <p class="mt-0.5 truncate text-xs text-stone-500">
+                  <span class="font-mono">{{ coupon.code }}</span> · {{ couponCondition(coupon) }} · {{ couponDates(coupon) }}
+                </p>
+              </div>
+              <button type="button" class="shrink-0 text-sm text-stone-500 hover:text-stone-900" @click="removeCoupon">不用了</button>
+            </div>
+
+            <ul v-else-if="usableMine.length" class="mt-2.5 space-y-2">
+              <li v-for="c in usableMine" :key="c.code">
+                <button
+                  type="button"
+                  class="flex w-full items-center gap-3 rounded-2xl bg-stone-50 px-4 py-3 text-left transition hover:bg-accent/5"
+                  :disabled="checkingCoupon"
+                  @click="applyCoupon(c.code)"
+                >
+                  <span class="min-w-0 flex-1">
+                    <span class="block text-[15px] font-semibold text-stone-900">{{ couponText(c) }}</span>
+                    <span class="mt-0.5 block truncate text-xs text-stone-500">{{ c.name || '优惠券' }} · {{ couponCondition(c) }} · {{ couponDates(c) }}</span>
+                  </span>
+                  <span class="shrink-0 text-sm font-medium text-accent">使用</span>
+                </button>
+              </li>
+            </ul>
+
+            <div v-if="couponOpen && !coupon" class="mt-2.5 flex gap-2">
+              <input
+                v-model="couponInput"
+                class="input h-11 bg-stone-50 font-mono uppercase placeholder:font-sans placeholder:normal-case focus:bg-white"
+                maxlength="40"
+                autocomplete="off"
+                placeholder="输入券码"
+                aria-label="券码"
+                @keydown.enter.prevent="applyCoupon()"
+              />
+              <button type="button" class="btn-secondary h-11 shrink-0 px-5" :disabled="checkingCoupon" @click="applyCoupon()">
+                {{ checkingCoupon ? '…' : '使用' }}
+              </button>
+            </div>
+            <p v-if="couponError" class="mt-1.5 text-xs text-rose-600" role="alert">{{ couponError }}</p>
+          </div>
+
           <p v-if="formError" class="rounded-2xl bg-rose-50 px-4 py-2.5 text-sm text-rose-700" role="alert">{{ formError }}</p>
 
           <div class="flex items-center gap-4 pt-1">
             <div class="min-w-0 flex-1">
               <p class="text-xs text-stone-400">应付</p>
               <p class="text-2xl font-semibold tracking-tight text-stone-900 tabular-nums">
-                <span class="mr-0.5 text-base font-medium">¥</span>{{ yuanShort(total) }}
+                <span class="mr-0.5 text-base font-medium">¥</span>{{ yuanShort(payable) }}
+                <span v-if="discount" class="ml-1 text-sm font-normal text-stone-400 line-through">¥{{ yuanShort(total) }}</span>
               </p>
             </div>
             <button type="submit" class="btn-primary h-12 flex-1 text-base" :disabled="soldOut || submitting">

@@ -1,4 +1,4 @@
-import type { OrderStatus, PayMethod } from './api';
+import type { CouponTerms, OrderStatus, PayMethod } from './api';
 
 /** ¥125 or ¥12.50: whole yuan without decimals, for prices. */
 export const yuanShort = (cents: number): string => {
@@ -20,6 +20,25 @@ const timeFormat = new Intl.DateTimeFormat('zh-CN', {
 });
 
 export const formatTime = (iso: string | null): string => (iso ? timeFormat.format(new Date(iso)).replace(/\//g, '-') : '');
+
+/** 'YYYY-MM-DD' in Beijing time. */
+export const beijingDay = (iso: string): string => new Date(Date.parse(iso) + 8 * 3_600_000).toISOString().slice(0, 10);
+
+/** "立减 ¥20" or "8.5 折". */
+export const couponText = (c: Pick<CouponTerms, 'kind' | 'value'>): string =>
+  c.kind === 'amount' ? `立减 ¥${yuanShort(c.value)}` : `${c.value % 10 === 0 ? c.value / 10 : (c.value / 10).toFixed(1)} 折`;
+
+export const couponCondition = (c: Pick<CouponTerms, 'min_amount'>): string =>
+  c.min_amount > 0 ? `满 ¥${yuanShort(c.min_amount)} 可用` : '无门槛';
+
+/** "2026-11-05 至 2026-12-05", "2026-12-05 前有效", "长期有效". ends_at is the instant after the last day. */
+export function couponDates(c: Pick<CouponTerms, 'starts_at' | 'ends_at'>): string {
+  const last = c.ends_at ? beijingDay(new Date(Date.parse(c.ends_at) - 1).toISOString()) : '';
+  if (c.starts_at && last) return `${beijingDay(c.starts_at)} 至 ${last}`;
+  if (last) return `${last} 前有效`;
+  if (c.starts_at) return `${beijingDay(c.starts_at)} 起长期有效`;
+  return '长期有效';
+}
 
 export const STATUS_TEXT: Record<OrderStatus, string> = {
   pending: '待付款',

@@ -98,6 +98,9 @@ onBeforeUnmount(() => clearInterval(ticker));
         <p class="mt-3 text-[44px] leading-none font-semibold tracking-tight text-stone-900 tabular-nums">
           <span class="mr-1 text-2xl font-medium">¥</span>{{ yuanExact(order.amount) }}
         </p>
+        <p v-if="order.discount" class="mt-2.5 text-sm text-accent">
+          已用优惠券 <span class="font-mono">{{ order.coupon_code }}</span>，省 ¥{{ yuanExact(order.discount) }}
+        </p>
         <p class="mt-5 inline-flex items-center gap-2 rounded-full bg-white py-1 pr-1 pl-4 text-sm text-stone-500 shadow-soft">
           订单号
           <span class="font-mono font-semibold tracking-wide text-stone-900">{{ order.order_no }}</span>
@@ -105,7 +108,12 @@ onBeforeUnmount(() => clearInterval(ticker));
         </p>
       </div>
 
-      <section class="card mt-7 px-6 pt-6 pb-5 text-center">
+      <section v-if="order.amount === 0" class="card mt-7 px-6 py-7 text-center">
+        <p class="text-[15px] font-medium text-stone-900">优惠券已全额抵扣，这单不用付款</p>
+        <p class="mt-1.5 text-sm text-stone-500">直接点下面的「我已付款，查看卡密」就能领取。</p>
+      </section>
+
+      <section v-else class="card mt-7 px-6 pt-6 pb-5 text-center">
         <p class="inline-flex items-center gap-2 text-sm font-medium" :class="order.pay_method === 'wechat' ? 'text-wechat' : 'text-alipay'">
           <span class="h-2 w-2 rounded-full" :class="order.pay_method === 'wechat' ? 'bg-wechat' : 'bg-alipay'" aria-hidden="true" />
           {{ methodText }}扫码付款
@@ -124,7 +132,7 @@ onBeforeUnmount(() => clearInterval(ticker));
         </p>
       </section>
 
-      <section class="mt-8 px-1">
+      <section v-if="order.amount > 0" class="mt-8 px-1">
         <h2 class="text-[15px] font-semibold text-stone-900">付款之后</h2>
         <ol class="mt-3 space-y-3 text-sm leading-6 text-stone-600">
           <li class="flex gap-3">

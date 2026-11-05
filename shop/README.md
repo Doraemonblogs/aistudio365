@@ -7,6 +7,18 @@ any whose money never arrived) and sees sales. Design: the development doc
 (https://claude.ai/artifact/RjSvQ4B2Q7egt5QpXMg4r7); buyer-confirmed payment came later and
 replaces the doc's "customer service confirms first" step.
 
+Orders can be handled in bulk: tick them in the admin list and confirm, complete, cancel or (once
+cancelled) delete them together. Marketing (营销) makes coupons: a fixed amount off or a discount
+rate, an optional threshold, all or chosen products, a Beijing date range, and one of three ways
+to hand them out:
+- one shared code, optionally with a use limit;
+- a batch of single-use codes;
+- one code per phone number. The buyer sees these automatically after typing that number.
+
+Each phone uses a coupon once. A pending order holds its coupon until the order is paid or
+cancelled. A discounted order always pays with the general QR code, because a product's
+fixed-amount code would charge the full price.
+
 Node.js 24 + TypeScript 6 + Fastify + SQLite (better-sqlite3); Vue 3 + Vite + Tailwind CSS 4.
 (TypeScript stays on 6 because vue-tsc does not support the TypeScript 7 native compiler yet.)
 
@@ -15,12 +27,12 @@ Node.js 24 + TypeScript 6 + Fastify + SQLite (better-sqlite3); Vue 3 + Vite + Ta
 | Path | What |
 | --- | --- |
 | `server/src/` | HTTP server, database schema and migrations, settings, password hashing |
-| `server/src/routes/public.ts` | Buyer API: shop info, products, place an order, look up orders |
-| `server/src/routes/admin.ts` | Admin API under `/api/admin`: login, products, cards, orders, stats, settings, uploads |
+| `server/src/routes/public.ts` | Buyer API: shop info, products, check a coupon, place an order, look up orders |
+| `server/src/routes/admin.ts` | Admin API under `/api/admin`: login, products, cards, orders (and batch), coupons, stats, settings, uploads |
 | `server/src/auth.ts` | Admin sessions (cookie `shop_admin`, 7 days, sliding) and the login lockout |
-| `server/src/shop/` | Product stock and order rules (holding stock, expiry, order numbers), sales stats |
+| `server/src/shop/` | Product stock and order rules (holding stock, expiry, order numbers), coupons, sales stats |
 | `web/` | Buyer pages: home, product, cashier, order detail, order lookup |
-| `web/src/admin/` | Admin pages at `/admin`: orders, products and cards, stats, settings, password |
+| `web/src/admin/` | Admin pages at `/admin`: orders, products and cards, marketing (coupons), stats, settings, password |
 | `server/src/cli/` | Admin password reset; compiled into the image, so it also runs in production |
 | `scripts/` | Dujiao-Next export/import, product listing |
 | `Dockerfile`, `deploy/` | Production image, compose file and deploy scripts; see `deploy/README.md` |

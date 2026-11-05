@@ -15,13 +15,17 @@ import { AppError } from '../errors.js';
 import { hashPassword, verifyPassword } from '../passwords.js';
 import { RateLimiter } from '../rateLimit.js';
 import { getSettings, updateSettings, type ShopSettings } from '../settings.js';
+import { normalizePhone } from '../phone.js';
+import { createCoupons, deleteCoupon, freshCodes, listCoupons, type CouponTarget } from '../shop/coupons.js';
 import {
+  batchOrders,
   cancelOrder,
   completeOrder,
   confirmPayment,
   expireOrders,
   parseCards,
   setOrderNote,
+  type BatchAction,
   type OrderRow,
 } from '../shop/orders.js';
 import { availableStock, getProduct, type ProductRow } from '../shop/products.js';
@@ -109,6 +113,59 @@ const settingsBody = {
 
 function adminOrder(order: OrderRow) {
   return { ...order, cards: parseCards(order.cards) };
+}
+
+const dateText = { type: ['string', 'null'], pattern: '^\\d{4}-\\d{2}-\\d{2}$' } as const;
+
+/**
+ * A batch of coupons on the same terms. mode 'code': one code (typed or random) many people can
+ * use, max_uses times in all (0 = no limit). 'codes': count single-use random codes. 'phones': one
+ * single-use code for each phone, usable only by that phone. Dates are Beijing calendar days; the
+ * end day is included.
+ */
+const couponBody = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['kind', 'value', 'mode'],
+  properties: {
+    name: { type: 'string', maxLength: 40, default: '' },
+    kind: { type: 'string', enum: ['amount', 'rate'] },
+    value: { type: 'integer', minimum: 1, maximum: 100_000_000 },
+    min_amount: yuanCents,
+    product_ids: { type: 'array', maxItems: 500, items: { type: 'integer', minimum: 1 } },
+    starts_on: dateText,
+    ends_on: dateText,
+    mode: { type: 'string', enum: ['code', 'codes', 'phones'] },
+    code: { type: 'string', maxLength: 32 },
+    max_uses: { type: 'integer', minimum: 0, maximum: 1_000_000 },
+    count: { type: 'integer', minimum: 1, maximum: 500 },
+    prefix: { type: 'string', maxLength: 10 },
+    phones: { type: 'array', maxItems: 500, items: { type: 'string', maxLength: 32 } },
+  },
+} as const;
+
+type CouponInput = {
+  name: string;
+  kind: 'amount' | 'rate';
+  value: number;
+  min_amount?: number;
+  product_ids?: number[];
+  starts_on?: string | null;
+  ends_on?: string | null;
+  mode: 'code' | 'codes' | 'phones';
+  code?: string;
+  max_uses?: number;
+  count?: number;
+  prefix?: string;
+  phones?: string[];
+};
+
+const addDays = (iso: string, days: number): string => new Date(Date.parse(iso) + days * 24 * 3_600_000).toISOString();
+
+function prefixOf(raw: string | undefined): string {
+  const prefix = (raw ?? '').trim().toUpperCase();
+  if (prefix && !/^[A-Z0-9]{1,10}$/.test(prefix)) throw new AppError(400, '前缀只能用字母和数字，最多 10 位');
+  return prefix;
 }
 
 export function registerAdminRoutes(app: FastifyInstance, db: DB, options: AdminRouteOptions): void {
@@ -472,6 +529,24 @@ export function registerAdminRoutes(app: FastifyInstance, db: DB, options: Admin
     scope.post<{ Params: { id: number } }>('/api/admin/orders/:id/cancel', { schema: { params: idParams } }, async (request) =>
       adminOrder(cancelOrder(db, request.params.id)),
     );
+    scope.post<{ Body: { action: BatchAction; ids: number[] } }>(
+      '/api/admin/orders/batch',
+      {
+        schema: {
+          body: {
+            type: 'object',
+            required: ['action', 'ids'],
+            additionalProperties: false,
+            properties: {
+              action: { type: 'string', enum: ['confirm', 'complete', 'cancel', 'delete'] },
+              ids: { type: 'array', minItems: 1, maxItems: 200, items: { type: 'integer', minimum: 1 } },
+            },
+          },
+        },
+      },
+      async (request) => batchOrders(db, request.body.action, request.body.ids),
+    );
+
     scope.put<{ Params: { id: number }; Body: { note: string } }>(
       '/api/admin/orders/:id/note',
       {
@@ -481,6 +556,78 @@ export function registerAdminRoutes(app: FastifyInstance, db: DB, options: Admin
         },
       },
       async (request) => adminOrder(setOrderNote(db, request.params.id, request.body.note.trim())),
+    );
+
+    // ---- coupons ----
+    scope.get('/api/admin/coupons', async () => {
+      expireOrders(db);
+      return listCoupons(db);
+    });
+
+    scope.post<{ Body: CouponInput }>('/api/admin/coupons', { schema: { body: couponBody } }, async (request, reply) => {
+      const body = request.body;
+      const terms = {
+        name: body.name.trim(),
+        kind: body.kind,
+        value: body.value,
+        min_amount: body.min_amount ?? 0,
+        product_ids: body.product_ids ?? [],
+        starts_at: body.starts_on ? beijingDateStart(body.starts_on) : null,
+        ends_at: body.ends_on ? addDays(beijingDateStart(body.ends_on), 1) : null,
+      };
+      let targets: CouponTarget[];
+      if (body.mode === 'code') {
+        targets = [{ code: body.code?.trim() || freshCodes(db, 1, prefixOf(body.prefix))[0]!, phone: '', max_uses: body.max_uses ?? 0 }];
+      } else if (body.mode === 'codes') {
+        if (!body.count) throw new AppError(400, '请填写生成数量');
+        targets = freshCodes(db, body.count, prefixOf(body.prefix)).map((code) => ({ code, phone: '', max_uses: 1 }));
+      } else {
+        const raw = (body.phones ?? []).map((p) => p.trim()).filter(Boolean);
+        const bad = raw.filter((p) => !normalizePhone(p));
+        if (bad.length) throw new AppError(400, `这些手机号不对：${bad.slice(0, 5).join('、')}${bad.length > 5 ? ' 等' : ''}`);
+        const phones = [...new Set(raw.map((p) => normalizePhone(p)!))];
+        if (phones.length === 0) throw new AppError(400, '请填写要发放的手机号，一行一个');
+        const codes = freshCodes(db, phones.length, prefixOf(body.prefix));
+        targets = phones.map((phone, i) => ({ code: codes[i]!, phone, max_uses: 1 }));
+      }
+      const created = createCoupons(db, terms, targets);
+      return reply.status(201).send({ created: created.length, ids: created.map((c) => c.id) });
+    });
+
+    scope.post<{ Body: { action: 'enable' | 'disable' | 'delete'; ids: number[] } }>(
+      '/api/admin/coupons/batch',
+      {
+        schema: {
+          body: {
+            type: 'object',
+            required: ['action', 'ids'],
+            additionalProperties: false,
+            properties: {
+              action: { type: 'string', enum: ['enable', 'disable', 'delete'] },
+              ids: { type: 'array', minItems: 1, maxItems: 5000, items: { type: 'integer', minimum: 1 } },
+            },
+          },
+        },
+      },
+      async (request) => {
+        const { action, ids } = request.body;
+        const failed: { id: number; error: string }[] = [];
+        let done = 0;
+        const setStatus = db.prepare('UPDATE coupons SET status = ? WHERE id = ?');
+        db.transaction(() => {
+          for (const id of new Set(ids)) {
+            try {
+              if (action === 'delete') deleteCoupon(db, id);
+              else if (!setStatus.run(action === 'enable' ? 'on' : 'off', id).changes) throw new AppError(404, '优惠券不存在');
+              done++;
+            } catch (error) {
+              if (!(error instanceof AppError)) throw error;
+              failed.push({ id, error: error.message });
+            }
+          }
+        })();
+        return { done, failed };
+      },
     );
 
     // ---- stats ----

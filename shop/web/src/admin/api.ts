@@ -1,4 +1,4 @@
-import { ApiError, type OrderStatus, type PayMethod } from '../api';
+import { ApiError, type CouponKind, type CouponTerms, type OrderStatus, type PayMethod } from '../api';
 
 export interface AdminCategory {
   id: number;
@@ -66,6 +66,47 @@ export interface AdminOrder {
   paid_at: string | null;
   completed_at: string | null;
   cancelled_at: string | null;
+  coupon_id: number | null;
+  coupon_code: string;
+  discount: number;
+}
+
+export type OrderBatchAction = 'confirm' | 'complete' | 'cancel' | 'delete';
+
+export interface BatchResult {
+  done: number;
+  failed: { id: number; order_no?: string; error: string }[];
+}
+
+export type CouponState = 'active' | 'scheduled' | 'used' | 'expired' | 'off';
+
+export interface AdminCoupon extends CouponTerms {
+  id: number;
+  code: string;
+  phone: string;
+  max_uses: number;
+  status: 'on' | 'off';
+  created_at: string;
+  used: number;
+  held: number;
+  state: CouponState;
+  uses: { order_no: string; phone: string; status: OrderStatus; amount: number; discount: number; created_at: string }[];
+}
+
+export interface CouponInput {
+  name: string;
+  kind: CouponKind;
+  value: number;
+  min_amount: number;
+  product_ids: number[];
+  starts_on: string | null;
+  ends_on: string | null;
+  mode: 'code' | 'codes' | 'phones';
+  code?: string;
+  max_uses?: number;
+  count?: number;
+  prefix?: string;
+  phones?: string[];
 }
 
 export interface OrderPage {
@@ -182,6 +223,13 @@ export const adminApi = {
   completeOrder: (id: number) => request<AdminOrder>(`/api/admin/orders/${id}/complete`, send('POST')),
   cancelOrder: (id: number) => request<AdminOrder>(`/api/admin/orders/${id}/cancel`, send('POST')),
   noteOrder: (id: number, note: string) => request<AdminOrder>(`/api/admin/orders/${id}/note`, send('PUT', { note })),
+  batchOrders: (action: OrderBatchAction, ids: number[]) =>
+    request<BatchResult>('/api/admin/orders/batch', send('POST', { action, ids })),
+
+  coupons: () => request<AdminCoupon[]>('/api/admin/coupons'),
+  createCoupons: (input: CouponInput) => request<{ created: number; ids: number[] }>('/api/admin/coupons', send('POST', input)),
+  batchCoupons: (action: 'enable' | 'disable' | 'delete', ids: number[]) =>
+    request<BatchResult>('/api/admin/coupons/batch', send('POST', { action, ids })),
 
   summary: () => request<SalesSummary>('/api/admin/stats/summary'),
   daily: (days: number) => request<DailySales[]>(`/api/admin/stats/daily${query({ days })}`),

@@ -94,4 +94,31 @@ export const migrations: readonly string[] = [
   );
   CREATE INDEX idx_sessions_expires ON sessions (expires_at);
   `,
+  // v3: coupons. kind 'amount' takes value cents off; kind 'rate' charges value percent of the
+  // subtotal (85 = 8.5 折). product_ids is a JSON array, empty for every product. A coupon with a
+  // phone works only for that phone; max_uses 0 means unlimited. Each phone uses a coupon once.
+  // An order keeps the code and the discount it got, even if the coupon is deleted later.
+  `
+  CREATE TABLE coupons (
+    id           INTEGER PRIMARY KEY,
+    code         TEXT    NOT NULL UNIQUE,
+    name         TEXT    NOT NULL DEFAULT '',
+    kind         TEXT    NOT NULL CHECK (kind IN ('amount', 'rate')),
+    value        INTEGER NOT NULL CHECK (value > 0),
+    min_amount   INTEGER NOT NULL DEFAULT 0 CHECK (min_amount >= 0),
+    product_ids  TEXT    NOT NULL DEFAULT '[]',
+    phone        TEXT    NOT NULL DEFAULT '',
+    max_uses     INTEGER NOT NULL DEFAULT 1 CHECK (max_uses >= 0),
+    starts_at    TEXT,
+    ends_at      TEXT,
+    status       TEXT    NOT NULL DEFAULT 'on' CHECK (status IN ('on', 'off')),
+    created_at   TEXT    NOT NULL
+  );
+  CREATE INDEX idx_coupons_phone ON coupons (phone);
+
+  ALTER TABLE orders ADD COLUMN coupon_id INTEGER REFERENCES coupons(id) ON DELETE SET NULL;
+  ALTER TABLE orders ADD COLUMN coupon_code TEXT NOT NULL DEFAULT '';
+  ALTER TABLE orders ADD COLUMN discount INTEGER NOT NULL DEFAULT 0 CHECK (discount >= 0);
+  CREATE INDEX idx_orders_coupon ON orders (coupon_id);
+  `,
 ];

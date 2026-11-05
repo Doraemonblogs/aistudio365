@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue';
 import type { OrderStatus } from '../../api';
 import CopyButton from '../../components/CopyButton.vue';
 import StatusBadge from '../../components/StatusBadge.vue';
 import { errorMessage, formatTime, PAY_TEXT, yuanExact } from '../../format';
-import { adminApi, type AdminOrder } from '../api';
+import { adminApi, type AdminOrder, type OrderBatchAction } from '../api';
 import { adminState, askConfirm, refreshOrderBadge, toast } from '../state';
 
 type Tab = OrderStatus | 'all';
@@ -53,6 +53,9 @@ async function load(more = false) {
     items.value = more ? [...items.value, ...page.items] : page.items;
     total.value = page.total;
     counts.value = page.counts;
+    // Orders that left the list (handled, filtered out) drop out of the selection.
+    const shown = new Set(items.value.map((o) => o.id));
+    for (const id of selected) if (!shown.has(id)) selected.delete(id);
   } catch (e) {
     if (ticket === latest) toast(errorMessage(e), 'error');
   } finally {
@@ -60,9 +63,13 @@ async function load(more = false) {
   }
 }
 
-watch(tab, () => load());
+watch(tab, () => {
+  selected.clear();
+  void load();
+});
 let searchTimer: ReturnType<typeof setTimeout> | undefined;
 watch([q, from, to], () => {
+  selected.clear();
   clearTimeout(searchTimer);
   searchTimer = setTimeout(() => load(), 300);
 });
@@ -72,9 +79,76 @@ onMounted(() => {
   void load();
   // New orders show up without a reload while the page sits open on the first page.
   refresher = setInterval(() => {
-    if (document.visibilityState === 'visible' && items.value.length <= PAGE && noteId.value === null && busyId.value === null) void load();
+    const idle = noteId.value === null && busyId.value === null && selected.size === 0;
+    if (document.visibilityState === 'visible' && items.value.length <= PAGE && idle) void load();
   }, 30_000);
 });
+
+// ---- batch ----
+const selected = reactive(new Set<number>());
+const batchBusy = ref(false);
+const selectedOrders = computed(() => items.value.filter((o) => selected.has(o.id)));
+const allSelected = computed(() => items.value.length > 0 && items.value.every((o) => selected.has(o.id)));
+
+function toggle(order: AdminOrder) {
+  if (selected.has(order.id)) selected.delete(order.id);
+  else selected.add(order.id);
+}
+
+function toggleAll() {
+  if (allSelected.value) selected.clear();
+  else for (const order of items.value) selected.add(order.id);
+}
+
+const BATCH: { action: OrderBatchAction; label: string; fits: (o: AdminOrder) => boolean; style: string }[] = [
+  { action: 'complete', label: '标记完成', fits: (o) => o.status === 'paid', style: 'bg-emerald-600 text-white hover:bg-emerald-700' },
+  { action: 'confirm', label: '确认收款', fits: (o) => o.status === 'pending' || o.status === 'cancelled', style: 'bg-white text-stone-900 hover:bg-stone-100' },
+  { action: 'cancel', label: '取消订单', fits: (o) => o.status === 'pending' || o.status === 'paid', style: 'bg-white/10 text-white hover:bg-white/20' },
+  { action: 'delete', label: '删除', fits: (o) => o.status === 'cancelled', style: 'bg-rose-500/90 text-white hover:bg-rose-600' },
+];
+// Only actions that fit at least one selected order are offered, each with how many it fits.
+const batchChoices = computed(() =>
+  BATCH.map((choice) => ({ ...choice, orders: selectedOrders.value.filter(choice.fits) })).filter((c) => c.orders.length > 0),
+);
+
+async function runBatch(choice: (typeof batchChoices.value)[number]) {
+  const n = choice.orders.length;
+  const sum = yuanExact(choice.orders.reduce((total, o) => total + o.amount, 0));
+  const skipped = selectedOrders.value.length - n;
+  const messages: Record<OrderBatchAction, string> = {
+    complete: `把 ${n} 笔已付款订单标记为已完成？`,
+    confirm: `确认收到这 ${n} 笔订单的款项，共 ¥${sum}？\n请先在微信/支付宝账单里逐笔核对。确认后买家会看到卡密。`,
+    cancel: `取消这 ${n} 笔订单？库存会退回；其中已付款的订单，买家将看不到卡密。`,
+    delete: `永久删除这 ${n} 笔已取消的订单？删除后无法恢复，也不再计入任何记录。`,
+  };
+  const ok = await askConfirm({
+    title: `批量${choice.label}`,
+    message: messages[choice.action] + (skipped ? `\n选中的另外 ${skipped} 笔不适用，会跳过。` : ''),
+    confirmText: `${choice.label} ${n} 笔`,
+    cancelText: '先不了',
+    danger: choice.action === 'delete' || choice.action === 'cancel',
+  });
+  if (!ok) return;
+  batchBusy.value = true;
+  try {
+    const result = await adminApi.batchOrders(
+      choice.action,
+      choice.orders.map((o) => o.id),
+    );
+    if (result.failed.length) {
+      const first = result.failed[0]!;
+      toast(`${choice.label}：${result.done} 笔成功，${result.failed.length} 笔没处理（${first.order_no} ${first.error}）`, 'error');
+    } else {
+      toast(`已${choice.label} ${result.done} 笔`);
+    }
+    selected.clear();
+    await Promise.all([load(), refreshOrderBadge()]);
+  } catch (e) {
+    toast(errorMessage(e), 'error');
+  } finally {
+    batchBusy.value = false;
+  }
+}
 onBeforeUnmount(() => {
   clearInterval(refresher);
   clearTimeout(searchTimer);
@@ -187,10 +261,35 @@ function clearFilters() {
       {{ hasFilters ? '没有符合条件的订单' : tab === 'paid' ? '没有要办理的订单' : tab === 'pending' ? '没有待付款的订单' : '暂无订单' }}
     </p>
 
-    <ul class="space-y-3">
+    <div v-if="items.length" class="flex items-center justify-between px-1 text-sm text-stone-500">
+      <label class="inline-flex cursor-pointer items-center gap-2 select-none">
+        <input
+          type="checkbox"
+          class="h-4 w-4 accent-stone-900"
+          :checked="allSelected"
+          :indeterminate="selected.size > 0 && !allSelected"
+          @change="toggleAll"
+        />
+        全选本页 {{ items.length }} 笔
+      </label>
+      <span v-if="selected.size" class="text-stone-700">已选 {{ selected.size }} 笔</span>
+      <span v-else class="text-xs text-stone-400">勾选订单可以批量处理</span>
+    </div>
+
+    <ul class="space-y-3" :class="{ 'pb-20': selected.size }">
       <li v-for="order in items" :key="order.id">
-        <article class="card p-4" :class="{ 'ring-2 ring-amber-300': order.status === 'paid' }">
+        <article
+          class="card p-4"
+          :class="selected.has(order.id) ? 'ring-2 ring-stone-900' : { 'ring-2 ring-amber-300': order.status === 'paid' }"
+        >
           <div class="flex flex-wrap items-center gap-x-2 gap-y-1">
+            <input
+              type="checkbox"
+              class="mr-1 h-4 w-4 shrink-0 cursor-pointer accent-stone-900"
+              :checked="selected.has(order.id)"
+              :aria-label="`选择订单 ${order.order_no}`"
+              @change="toggle(order)"
+            />
             <span class="font-mono text-[15px] font-semibold tracking-wide text-stone-900">{{ order.order_no }}</span>
             <CopyButton :text="order.order_no" />
             <StatusBadge :status="order.status" />
@@ -210,6 +309,10 @@ function clearFilters() {
             <p v-if="order.paid_at" class="text-stone-500 sm:text-right">付款 {{ formatTime(order.paid_at) }}</p>
             <p v-else-if="order.status === 'pending'" class="text-amber-700 sm:text-right">{{ formatTime(order.expire_at) }} 前未付款会自动取消</p>
             <p v-else-if="order.cancelled_at" class="text-stone-500 sm:text-right">取消于 {{ formatTime(order.cancelled_at) }}</p>
+            <p v-if="order.discount" class="text-accent sm:col-span-2">
+              优惠券 <span class="font-mono">{{ order.coupon_code }}</span> −¥{{ yuanExact(order.discount) }}
+              <span class="text-stone-400">（原价 ¥{{ yuanExact(order.unit_price * order.quantity) }}）</span>
+            </p>
           </div>
 
           <p v-if="order.cards.length" class="mt-2 text-xs leading-5 break-all text-stone-500">已发卡密：{{ order.cards.join('、') }}</p>
@@ -259,6 +362,25 @@ function clearFilters() {
 
     <div v-if="items.length < total" class="text-center">
       <button type="button" class="btn-secondary" :disabled="loading" @click="load(true)">{{ loading ? '加载中…' : `加载更多（还有 ${total - items.length} 笔）` }}</button>
+    </div>
+
+    <!-- Batch bar: only the actions that fit something selected, each with its count. -->
+    <div v-if="selected.size" class="fixed inset-x-0 bottom-4 z-30 flex justify-center px-4">
+      <div class="flex max-w-full flex-wrap items-center gap-1.5 rounded-2xl bg-stone-900 p-2 text-sm text-white shadow-2xl">
+        <span class="px-2 font-medium">已选 {{ selected.size }} 笔</span>
+        <button
+          v-for="choice in batchChoices"
+          :key="choice.action"
+          type="button"
+          class="rounded-xl px-3 py-1.5 font-medium transition disabled:opacity-50"
+          :class="choice.style"
+          :disabled="batchBusy"
+          @click="runBatch(choice)"
+        >
+          {{ choice.label }}<span class="ml-1 tabular-nums opacity-70">{{ choice.orders.length }}</span>
+        </button>
+        <button type="button" class="rounded-xl px-2.5 py-1.5 text-stone-400 hover:text-white" @click="selected.clear()">取消选择</button>
+      </div>
     </div>
   </div>
 </template>

@@ -3,6 +3,7 @@ import Database from 'better-sqlite3';
 import type { DB } from '../db/index.js';
 import { AppError } from '../errors.js';
 import { addMinutes, nowIso } from '../time.js';
+import { quoteCoupon } from './coupons.js';
 import { availableStock, getProduct } from './products.js';
 
 export type OrderStatus = 'pending' | 'paid' | 'completed' | 'cancelled';
@@ -27,6 +28,10 @@ export interface OrderRow {
   paid_at: string | null;
   completed_at: string | null;
   cancelled_at: string | null;
+  coupon_id: number | null;
+  coupon_code: string;
+  /** Cents the coupon took off; amount = unit_price × quantity − discount. */
+  discount: number;
 }
 
 /** A buyer may have this many unpaid orders at once. */
@@ -49,6 +54,7 @@ export interface CreateOrderInput {
   phone: string;
   payMethod: PayMethod;
   clientIp: string;
+  couponCode?: string;
 }
 
 export function getOrder(db: DB, id: number): OrderRow | undefined {
@@ -75,6 +81,11 @@ export function createOrder(db: DB, input: CreateOrderInput, timeoutMinutes: num
       throw new AppError(429, `你已有 ${MAX_PENDING_PER_PHONE} 笔待付款订单，请先完成付款，或等它们自动取消后再下单`);
     }
 
+    const subtotal = product.price * input.quantity;
+    const quote = input.couponCode?.trim()
+      ? quoteCoupon(db, input.couponCode, { productId: product.id, subtotal, phone: input.phone })
+      : null;
+
     if (product.card_mode === 'fixed' && product.stock >= 0) {
       const taken = db
         .prepare('UPDATE products SET stock = stock - @qty WHERE id = @id AND stock >= @qty')
@@ -85,9 +96,9 @@ export function createOrder(db: DB, input: CreateOrderInput, timeoutMinutes: num
     const createdAt = nowIso();
     const insert = db.prepare(`
       INSERT INTO orders (order_no, phone, product_id, product_name, unit_price, quantity, amount, pay_method,
-                          status, client_ip, created_at, expire_at)
+                          status, client_ip, created_at, expire_at, coupon_id, coupon_code, discount)
       VALUES (@order_no, @phone, @product_id, @product_name, @unit_price, @quantity, @amount, @pay_method,
-              'pending', @client_ip, @created_at, @expire_at)`);
+              'pending', @client_ip, @created_at, @expire_at, @coupon_id, @coupon_code, @discount)`);
     for (let attempt = 1; ; attempt++) {
       try {
         const result = insert.run({
@@ -97,11 +108,14 @@ export function createOrder(db: DB, input: CreateOrderInput, timeoutMinutes: num
           product_name: product.name,
           unit_price: product.price,
           quantity: input.quantity,
-          amount: product.price * input.quantity,
+          amount: quote ? quote.amount : subtotal,
           pay_method: input.payMethod,
           client_ip: input.clientIp,
           created_at: createdAt,
           expire_at: addMinutes(createdAt, timeoutMinutes),
+          coupon_id: quote?.coupon.id ?? null,
+          coupon_code: quote?.coupon.code ?? '',
+          discount: quote?.discount ?? 0,
         });
         return getOrder(db, Number(result.lastInsertRowid))!;
       } catch (error) {
@@ -224,6 +238,34 @@ export function cancelOrder(db: DB, id: number, now = nowIso()): OrderRow {
     }
     return getOrder(db, id)!;
   })();
+}
+
+/** Removes a cancelled order for good (test orders, spam). Other orders are kept for the books. */
+export function deleteOrder(db: DB, id: number): void {
+  const order = requireOrder(db, id);
+  if (order.status !== 'cancelled') throw new AppError(409, '只有已取消的订单可以删除');
+  db.prepare('DELETE FROM orders WHERE id = ?').run(id);
+}
+
+export type BatchAction = 'confirm' | 'complete' | 'cancel' | 'delete';
+
+/** Runs one action over many orders; each order succeeds or fails on its own. */
+export function batchOrders(db: DB, action: BatchAction, ids: number[], now = nowIso()) {
+  const failed: { id: number; order_no: string; error: string }[] = [];
+  let done = 0;
+  for (const id of [...new Set(ids)]) {
+    try {
+      if (action === 'confirm') confirmPayment(db, id, now);
+      else if (action === 'complete') completeOrder(db, id, now);
+      else if (action === 'cancel') cancelOrder(db, id, now);
+      else deleteOrder(db, id);
+      done++;
+    } catch (error) {
+      if (!(error instanceof AppError)) throw error;
+      failed.push({ id, order_no: getOrder(db, id)?.order_no ?? '', error: error.message });
+    }
+  }
+  return { done, failed };
 }
 
 export function setOrderNote(db: DB, id: number, note: string): OrderRow {

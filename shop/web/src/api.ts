@@ -42,6 +42,8 @@ export interface BuyerOrder {
   quantity: number;
   unit_price: number;
   amount: number;
+  discount: number;
+  coupon_code: string;
   pay_method: PayMethod;
   created_at: string;
   expire_at: string;
@@ -51,6 +53,29 @@ export interface BuyerOrder {
   qr: { url: string; fixed_amount: boolean } | null;
   cards: string[];
   instructions: string;
+}
+
+export type CouponKind = 'amount' | 'rate';
+
+/** A coupon's terms. kind 'amount': value cents off; 'rate': pay value percent (85 = 8.5 折). */
+export interface CouponTerms {
+  name: string;
+  kind: CouponKind;
+  value: number;
+  min_amount: number;
+  product_ids: number[];
+  starts_at: string | null;
+  ends_at: string | null;
+}
+
+export interface BuyerCoupon extends CouponTerms {
+  code: string;
+}
+
+export interface CouponQuote extends BuyerCoupon {
+  subtotal: number;
+  discount: number;
+  amount: number;
 }
 
 export interface OrderListItem {
@@ -95,8 +120,11 @@ export const api = {
   shop: () => request<Shop>('/api/shop'),
   products: () => request<ProductSummary[]>('/api/products'),
   product: (id: number) => request<ProductDetail>(`/api/products/${id}`),
-  createOrder: (input: { product_id: number; quantity: number; phone: string; pay_method: PayMethod }) =>
+  createOrder: (input: { product_id: number; quantity: number; phone: string; pay_method: PayMethod; coupon_code?: string }) =>
     request<BuyerOrder>('/api/orders', { method: 'POST', body: JSON.stringify(input) }),
+  checkCoupon: (input: { code: string; product_id: number; quantity: number; phone?: string }) =>
+    request<CouponQuote>('/api/coupons/check', { method: 'POST', body: JSON.stringify(input) }),
+  myCoupons: (phone: string) => request<BuyerCoupon[]>(`/api/coupons?phone=${q(phone)}`),
   order: (orderNo: string, phone: string) => request<BuyerOrder>(`/api/orders/${q(orderNo)}?phone=${q(phone)}`),
   orders: (phone: string) => request<OrderListItem[]>(`/api/orders?phone=${q(phone)}`),
   markPaid: (orderNo: string, phone: string) =>
