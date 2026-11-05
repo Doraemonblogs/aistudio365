@@ -92,119 +92,129 @@ async function submit() {
       <RouterLink to="/" class="btn-secondary mt-5">返回首页</RouterLink>
     </div>
 
-    <div v-else-if="!product" class="grid gap-8 md:grid-cols-2 md:gap-12">
-      <div class="aspect-square animate-pulse rounded-3xl bg-stone-200/60" />
-      <div class="space-y-4">
-        <div class="h-7 w-4/5 animate-pulse rounded-full bg-stone-200/60" />
-        <div class="h-9 w-1/3 animate-pulse rounded-full bg-stone-200/60" />
-        <div class="h-72 animate-pulse rounded-3xl bg-stone-200/60" />
+    <div v-else-if="!product" class="grid gap-8 md:grid-cols-[minmax(0,1fr)_340px] md:gap-12 lg:grid-cols-[minmax(0,1fr)_380px]">
+      <div class="flex items-center gap-4 sm:gap-5">
+        <div class="h-20 w-20 shrink-0 animate-pulse rounded-[22px] bg-stone-200/60 sm:h-28 sm:w-28 sm:rounded-[28px]" />
+        <div class="flex-1 space-y-3">
+          <div class="h-7 w-4/5 animate-pulse rounded-full bg-stone-200/60" />
+          <div class="h-8 w-1/3 animate-pulse rounded-full bg-stone-200/60" />
+        </div>
       </div>
+      <div class="h-80 animate-pulse rounded-3xl bg-stone-200/60" />
     </div>
 
-    <template v-else>
-      <div class="grid gap-8 md:grid-cols-2 md:items-start md:gap-12">
-        <div class="overflow-hidden rounded-3xl bg-white shadow-soft md:sticky md:top-24">
-          <img
-            v-if="product.image"
-            :src="product.image"
-            :alt="product.name"
-            class="aspect-square w-full object-cover"
+    <!--
+      Product pictures are app icons, so they sit small beside the name, the way an app store lists them.
+      Wide screens: name and details on the left, the buy card held on the right while the details scroll.
+      Narrow screens: name, buy card, then details.
+    -->
+    <div v-else class="grid gap-y-10 md:grid-cols-[minmax(0,1fr)_340px] md:grid-rows-[auto_1fr] md:gap-x-12 lg:grid-cols-[minmax(0,1fr)_380px] lg:gap-x-16">
+      <header class="md:col-start-1 md:row-start-1">
+        <div class="flex items-center gap-4 sm:gap-5">
+          <div
+            class="h-20 w-20 shrink-0 overflow-hidden rounded-[22px] bg-white shadow-soft sm:h-28 sm:w-28 sm:rounded-[28px]"
             :class="{ 'opacity-50 grayscale': soldOut }"
-          />
-        </div>
-
-        <div>
-          <h1 class="text-xl leading-8 font-semibold tracking-tight text-stone-900 sm:text-2xl sm:leading-9">{{ product.name }}</h1>
-          <div class="mt-4 flex items-end justify-between gap-3">
-            <PriceTag :price="product.price" :original="product.original_price" large />
-            <StockBadge :status="product.stock_status" />
+          >
+            <img v-if="product.image" :src="product.image" :alt="product.name" class="h-full w-full object-cover" />
+            <span v-else class="flex h-full w-full items-center justify-center bg-sand text-3xl font-semibold text-stone-400" aria-hidden="true">
+              {{ product.name.replace(/^【[^】]*】/, '').trim().charAt(0) }}
+            </span>
           </div>
-          <p v-if="product.summary" class="mt-4 text-[15px] leading-7 text-stone-500">{{ product.summary }}</p>
-
-          <form class="card mt-7 space-y-6 p-5 sm:p-6" novalidate @submit.prevent="submit">
-            <div class="flex items-center justify-between gap-3">
-              <span class="text-sm text-stone-500">数量</span>
-              <div class="flex items-center gap-3">
-                <span v-if="!soldOut" class="text-xs text-stone-400">最多 {{ product.max_qty }} 件</span>
-                <div class="inline-flex items-center rounded-full bg-stone-100 p-1">
-                  <button
-                    type="button"
-                    class="flex h-8 w-8 items-center justify-center rounded-full text-lg text-stone-600 transition hover:bg-white disabled:text-stone-300 disabled:hover:bg-transparent"
-                    :disabled="soldOut || quantity <= 1"
-                    aria-label="减少"
-                    @click="changeQuantity(-1)"
-                  >−</button>
-                  <span class="w-9 text-center font-semibold text-stone-900 tabular-nums">{{ quantity }}</span>
-                  <button
-                    type="button"
-                    class="flex h-8 w-8 items-center justify-center rounded-full text-lg text-stone-600 transition hover:bg-white disabled:text-stone-300 disabled:hover:bg-transparent"
-                    :disabled="soldOut || quantity >= product.max_qty"
-                    aria-label="增加"
-                    @click="changeQuantity(1)"
-                  >+</button>
-                </div>
-              </div>
+          <div class="min-w-0 flex-1">
+            <h1 class="text-lg leading-7 font-semibold tracking-tight text-stone-900 sm:text-[22px] sm:leading-8">{{ product.name }}</h1>
+            <div class="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 sm:mt-3">
+              <PriceTag :price="product.price" :original="product.original_price" large />
+              <StockBadge :status="product.stock_status" />
             </div>
+          </div>
+        </div>
+        <p v-if="product.summary" class="mt-5 text-[15px] leading-7 text-stone-500 sm:mt-6">{{ product.summary }}</p>
+      </header>
 
-            <div>
-              <label for="phone" class="label">手机号</label>
-              <input
-                id="phone"
-                v-model="phone"
-                type="tel"
-                inputmode="numeric"
-                autocomplete="tel"
-                maxlength="16"
-                placeholder="用来查订单，不会公开"
-                class="input bg-stone-50 focus:bg-white"
-                :class="{ 'border-rose-300 focus:border-rose-400 focus:ring-rose-100': phoneInvalid }"
-                @blur="phoneTouched = true"
-              />
-              <p v-if="phoneInvalid" class="mt-1.5 text-xs text-rose-600">请输入正确的 11 位手机号</p>
-            </div>
-
-            <div>
-              <span class="label">付款方式</span>
-              <div class="grid grid-cols-2 gap-3" role="radiogroup" aria-label="付款方式">
+      <div class="md:col-start-2 md:row-span-2 md:row-start-1">
+        <form class="card space-y-6 p-5 sm:p-6 md:sticky md:top-24" novalidate @submit.prevent="submit">
+          <div class="flex items-center justify-between gap-3">
+            <span class="text-sm text-stone-500">数量</span>
+            <div class="flex items-center gap-3">
+              <span v-if="!soldOut" class="text-xs text-stone-400">最多 {{ product.max_qty }} 件</span>
+              <div class="inline-flex items-center rounded-full bg-stone-100 p-1">
                 <button
-                  v-for="method in methods"
-                  :key="method.key"
                   type="button"
-                  role="radio"
-                  :aria-checked="payMethod === method.key"
-                  class="flex h-12 items-center justify-center gap-2 rounded-2xl text-[15px] transition"
-                  :class="payMethod === method.key ? `bg-white font-semibold text-stone-900 ring-2 ${method.ring}` : 'bg-stone-100 text-stone-500 hover:text-stone-800'"
-                  @click="payMethod = method.key"
-                >
-                  <span class="h-2.5 w-2.5 rounded-full" :class="method.dot" aria-hidden="true" />
-                  {{ method.label }}
-                </button>
+                  class="flex h-8 w-8 items-center justify-center rounded-full text-lg text-stone-600 transition hover:bg-white disabled:text-stone-300 disabled:hover:bg-transparent"
+                  :disabled="soldOut || quantity <= 1"
+                  aria-label="减少"
+                  @click="changeQuantity(-1)"
+                >−</button>
+                <span class="w-9 text-center font-semibold text-stone-900 tabular-nums">{{ quantity }}</span>
+                <button
+                  type="button"
+                  class="flex h-8 w-8 items-center justify-center rounded-full text-lg text-stone-600 transition hover:bg-white disabled:text-stone-300 disabled:hover:bg-transparent"
+                  :disabled="soldOut || quantity >= product.max_qty"
+                  aria-label="增加"
+                  @click="changeQuantity(1)"
+                >+</button>
               </div>
             </div>
+          </div>
 
-            <p v-if="formError" class="rounded-2xl bg-rose-50 px-4 py-2.5 text-sm text-rose-700" role="alert">{{ formError }}</p>
+          <div>
+            <label for="phone" class="label">手机号</label>
+            <input
+              id="phone"
+              v-model="phone"
+              type="tel"
+              inputmode="numeric"
+              autocomplete="tel"
+              maxlength="16"
+              placeholder="用来查订单，不会公开"
+              class="input bg-stone-50 focus:bg-white"
+              :class="{ 'border-rose-300 focus:border-rose-400 focus:ring-rose-100': phoneInvalid }"
+              @blur="phoneTouched = true"
+            />
+            <p v-if="phoneInvalid" class="mt-1.5 text-xs text-rose-600">请输入正确的 11 位手机号</p>
+          </div>
 
-            <div class="flex items-center gap-4 pt-1">
-              <div class="min-w-0 flex-1">
-                <p class="text-xs text-stone-400">应付</p>
-                <p class="text-2xl font-semibold tracking-tight text-stone-900 tabular-nums">
-                  <span class="mr-0.5 text-base font-medium">¥</span>{{ yuanShort(total) }}
-                </p>
-              </div>
-              <button type="submit" class="btn-primary h-12 flex-1 text-base" :disabled="soldOut || submitting">
-                {{ soldOut ? '已售罄' : submitting ? '正在下单…' : '去付款' }}
+          <div>
+            <span class="label">付款方式</span>
+            <div class="grid grid-cols-2 gap-3" role="radiogroup" aria-label="付款方式">
+              <button
+                v-for="method in methods"
+                :key="method.key"
+                type="button"
+                role="radio"
+                :aria-checked="payMethod === method.key"
+                class="flex h-12 items-center justify-center gap-2 rounded-2xl text-[15px] transition"
+                :class="payMethod === method.key ? `bg-white font-semibold text-stone-900 ring-2 ${method.ring}` : 'bg-stone-100 text-stone-500 hover:text-stone-800'"
+                @click="payMethod = method.key"
+              >
+                <span class="h-2.5 w-2.5 rounded-full" :class="method.dot" aria-hidden="true" />
+                {{ method.label }}
               </button>
             </div>
-          </form>
-        </div>
+          </div>
+
+          <p v-if="formError" class="rounded-2xl bg-rose-50 px-4 py-2.5 text-sm text-rose-700" role="alert">{{ formError }}</p>
+
+          <div class="flex items-center gap-4 pt-1">
+            <div class="min-w-0 flex-1">
+              <p class="text-xs text-stone-400">应付</p>
+              <p class="text-2xl font-semibold tracking-tight text-stone-900 tabular-nums">
+                <span class="mr-0.5 text-base font-medium">¥</span>{{ yuanShort(total) }}
+              </p>
+            </div>
+            <button type="submit" class="btn-primary h-12 flex-1 text-base" :disabled="soldOut || submitting">
+              {{ soldOut ? '已售罄' : submitting ? '正在下单…' : '去付款' }}
+            </button>
+          </div>
+        </form>
       </div>
 
-      <section v-if="product.description" class="mt-12 max-w-3xl sm:mt-16">
+      <section v-if="product.description" class="md:col-start-1 md:row-start-2">
         <h2 class="mb-3 flex items-center gap-2 text-xs font-medium tracking-[0.2em] text-stone-500">
           <span class="h-1.5 w-1.5 rounded-full bg-accent" aria-hidden="true" />商品详情
         </h2>
         <HtmlContent :html="product.description" class="text-stone-700" />
       </section>
-    </template>
+    </div>
   </div>
 </template>

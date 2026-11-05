@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, nextTick, ref, watch } from 'vue';
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import HtmlContent from '../../components/HtmlContent.vue';
 import { htmlToMarkdown, markdownToHtml } from '../markdown';
 
@@ -36,6 +36,24 @@ const tabs = [
   { key: 'preview', text: '预览' },
 ] as const;
 const box = ref<HTMLTextAreaElement | null>(null);
+
+// The box grows with its text (rows is the least it shows), so nothing hides behind a scrollbar.
+// When the preview runs taller, the box also stretches to match it rather than leaving a gap below.
+function fit() {
+  const el = box.value;
+  if (!el || !el.offsetParent) return;
+  // Measure without the stretch, or the box could only ever grow.
+  el.style.flexGrow = '0';
+  el.style.height = 'auto';
+  el.style.height = `${el.scrollHeight}px`;
+  el.style.flexGrow = '';
+}
+watch([text, tab], () => void nextTick(fit));
+onMounted(() => {
+  fit();
+  window.addEventListener('resize', fit);
+});
+onBeforeUnmount(() => window.removeEventListener('resize', fit));
 
 type Change = { value: string; start: number; end: number };
 async function change(edit: (value: string, start: number, end: number) => Change) {
@@ -105,8 +123,8 @@ const tools = [
 
     <div class="grid gap-3 md:grid-cols-2">
       <div
-        class="overflow-hidden rounded-xl border border-stone-300 bg-white transition focus-within:border-blue-500 focus-within:ring-4 focus-within:ring-blue-100"
-        :class="{ 'hidden md:block': tab === 'preview' }"
+        class="flex-col overflow-hidden rounded-xl border border-stone-300 bg-white transition focus-within:border-blue-500 focus-within:ring-4 focus-within:ring-blue-100"
+        :class="tab === 'preview' ? 'hidden md:flex' : 'flex'"
       >
         <div class="flex flex-wrap gap-0.5 border-b border-stone-200 bg-stone-50 px-1.5 py-1">
           <button
@@ -125,7 +143,7 @@ const tools = [
           :rows="rows"
           :placeholder="placeholder"
           :aria-label="label"
-          class="block w-full resize-y bg-transparent px-3.5 py-2.5 text-[15px] leading-6 text-stone-900 outline-none placeholder:text-stone-400"
+          class="block max-h-[70vh] w-full grow resize-none bg-transparent px-3.5 py-2.5 text-[15px] leading-6 text-stone-900 outline-none placeholder:text-stone-400"
           @input="commit"
           @keydown.ctrl.b.prevent="tools[0]!.run()"
           @keydown.meta.b.prevent="tools[0]!.run()"
