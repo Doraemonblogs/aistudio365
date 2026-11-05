@@ -130,7 +130,7 @@ onBeforeUnmount(() => window.removeEventListener('beforeunload', beforeUnload));
         <div class="sm:max-w-xs">
           <label for="timeout" class="label">付款时限（分钟）</label>
           <input id="timeout" v-model="form.order_timeout_minutes" class="input" inputmode="numeric" />
-          <p class="mt-1.5 text-xs leading-5 text-slate-500">下单后这么久还没确认收款，订单自动取消、库存退回。只影响之后的新订单。</p>
+          <p class="mt-1.5 text-xs leading-5 text-slate-500">下单后这么久还没付款，订单自动取消、库存退回。只影响之后的新订单。</p>
         </div>
       </section>
 

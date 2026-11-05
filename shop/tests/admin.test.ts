@@ -153,6 +153,26 @@ describe('orders', () => {
     expect((await api('GET', `/api/admin/products/${id}`)).json().stock).toBe(3);
   });
 
+  it('voids a buyer-marked paid order whose money never came', async () => {
+    const id = (await api('POST', '/api/admin/products', baseProduct)).json().id as number;
+    const placed = await placeOrder(id, 2);
+    await app.inject({ method: 'POST', url: `/api/orders/${placed.order_no}/paid`, payload: { phone: '13800138000' } });
+    expect((await api('GET', '/api/admin/stats/summary')).json().paid_orders).toBe(1);
+    expect((await api('GET', `/api/admin/products/${id}`)).json().stock).toBe(3);
+
+    const oid = orderId(placed.order_no);
+    expect((await api('POST', `/api/admin/orders/${oid}/cancel`)).json()).toMatchObject({ status: 'cancelled', paid_at: null });
+    expect((await api('GET', `/api/admin/products/${id}`)).json().stock).toBe(5);
+    const buyer = (await app.inject(`/api/orders/${placed.order_no}?phone=13800138000`)).json();
+    expect(buyer).toMatchObject({ status: 'cancelled', cards: [], instructions: '' });
+
+    // The money turns up after all: confirm again; completed orders can't be cancelled.
+    expect((await api('POST', `/api/admin/orders/${oid}/confirm`)).json()).toMatchObject({ status: 'paid' });
+    expect((await api('GET', `/api/admin/products/${id}`)).json().stock).toBe(3);
+    await api('POST', `/api/admin/orders/${oid}/complete`);
+    expect((await api('POST', `/api/admin/orders/${oid}/cancel`)).statusCode).toBe(409);
+  });
+
   it('hands out pool cards and refuses when they run out', async () => {
     const id = (await api('POST', '/api/admin/products', { ...baseProduct, card_mode: 'pool' })).json().id as number;
     expect((await api('POST', `/api/admin/products/${id}/cards`, { text: 'A-1\nA-2\n\nA-2\nA-3 ' })).json()).toEqual({

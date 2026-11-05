@@ -5,6 +5,7 @@ import { normalizePhone } from '../phone.js';
 import { RateLimiter } from '../rateLimit.js';
 import { getSettings, type ShopSettings } from '../settings.js';
 import {
+  buyerConfirmPayment,
   createOrder,
   expireOrders,
   findBuyerOrder,
@@ -28,7 +29,7 @@ function productSummary(db: DB, p: ProductRow) {
   };
 }
 
-/** What the buyer sees of an order. Cards and instructions only once payment is confirmed. */
+/** What the buyer sees of an order. Cards and instructions only once it is paid. */
 function buyerOrder(db: DB, order: OrderRow, settings: ShopSettings) {
   const product = order.product_id === null ? undefined : getProduct(db, order.product_id);
   const delivered = order.status === 'paid' || order.status === 'completed';
@@ -170,6 +171,25 @@ export function registerPublicRoutes(app: FastifyInstance, db: DB): void {
       const order = findBuyerOrder(db, request.params.orderNo.trim().toUpperCase(), phone);
       if (!order) throw new AppError(404, '没有找到这个订单，请检查订单号和手机号');
       return buyerOrder(db, order, getSettings(db));
+    },
+  );
+
+  // "我已付款": the buyer's word is enough; the cards show straight away.
+  app.post<{ Params: { orderNo: string }; Body: { phone: string } }>(
+    '/api/orders/:orderNo/paid',
+    {
+      schema: {
+        params: { type: 'object', required: ['orderNo'], properties: { orderNo: { type: 'string', maxLength: 32 } } },
+        body: phoneQuery,
+      },
+    },
+    async (request) => {
+      if (!lookupLimiter.allow(request.ip)) throw new AppError(429, '操作太频繁了，请稍后再试');
+      const phone = requirePhone(request.body.phone);
+      expireOrders(db);
+      const order = findBuyerOrder(db, request.params.orderNo.trim().toUpperCase(), phone);
+      if (!order) throw new AppError(404, '没有找到这个订单，请检查订单号和手机号');
+      return buyerOrder(db, buyerConfirmPayment(db, order), getSettings(db));
     },
   );
 

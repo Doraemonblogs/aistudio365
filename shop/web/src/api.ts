@@ -99,4 +99,6 @@ export const api = {
     request<BuyerOrder>('/api/orders', { method: 'POST', body: JSON.stringify(input) }),
   order: (orderNo: string, phone: string) => request<BuyerOrder>(`/api/orders/${q(orderNo)}?phone=${q(phone)}`),
   orders: (phone: string) => request<OrderListItem[]>(`/api/orders?phone=${q(phone)}`),
+  markPaid: (orderNo: string, phone: string) =>
+    request<BuyerOrder>(`/api/orders/${q(orderNo)}/paid`, { method: 'POST', body: JSON.stringify({ phone }) }),
 };

@@ -1,8 +1,8 @@
 import { reactive } from 'vue';
 import { adminApi } from './api';
 
-/** Who is signed in, and how many orders wait for a payment check (shown on the nav). */
-export const adminState = reactive({ username: '', pendingOrders: 0 });
+/** Who is signed in, and how many paid orders still wait to be handled (shown on the nav). */
+export const adminState = reactive({ username: '', ordersToHandle: 0 });
 
 export async function ensureAdmin(): Promise<boolean> {
   if (adminState.username) return true;
@@ -14,9 +14,9 @@ export async function ensureAdmin(): Promise<boolean> {
   }
 }
 
-export async function refreshPending(): Promise<void> {
+export async function refreshOrderBadge(): Promise<void> {
   try {
-    adminState.pendingOrders = (await adminApi.summary()).pending_orders;
+    adminState.ordersToHandle = (await adminApi.summary()).paid_orders;
   } catch {
     // the badge just stays as it was
   }

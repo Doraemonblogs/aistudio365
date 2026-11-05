@@ -79,7 +79,7 @@ function usePreset(preset: (typeof PRESETS)[number]) {
 
 <template>
   <div class="space-y-4">
-    <p class="px-1 text-xs text-slate-500">只统计已确认收款的订单（已付款和已完成），按北京时间计算。</p>
+    <p class="px-1 text-xs text-slate-500">只统计已付款和已完成的订单，按北京时间计算。</p>
 
     <!-- Headline figures -->
     <div class="grid grid-cols-2 gap-3 lg:grid-cols-4">
@@ -96,11 +96,11 @@ function usePreset(preset: (typeof PRESETS)[number]) {
     </div>
 
     <div v-if="summary && (summary.pending_orders > 0 || summary.paid_orders > 0)" class="flex flex-wrap gap-2 text-sm">
-      <RouterLink v-if="summary.pending_orders > 0" to="/admin/orders" class="rounded-full bg-amber-50 px-3 py-1 text-amber-800 ring-1 ring-amber-200 ring-inset">
-        {{ summary.pending_orders }} 单待确认收款 →
+      <RouterLink v-if="summary.paid_orders > 0" to="/admin/orders" class="rounded-full bg-amber-50 px-3 py-1 text-amber-800 ring-1 ring-amber-200 ring-inset">
+        {{ summary.paid_orders }} 单已付款、待办理 →
       </RouterLink>
-      <span v-if="summary.paid_orders > 0" class="rounded-full bg-blue-50 px-3 py-1 text-blue-700 ring-1 ring-blue-200 ring-inset">
-        {{ summary.paid_orders }} 单已付款、还没标记完成
+      <span v-if="summary.pending_orders > 0" class="rounded-full bg-slate-100 px-3 py-1 text-slate-600 ring-1 ring-slate-200 ring-inset">
+        {{ summary.pending_orders }} 单等待买家付款
       </span>
     </div>
 

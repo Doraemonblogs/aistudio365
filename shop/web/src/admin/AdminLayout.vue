@@ -4,7 +4,7 @@ import { useRoute, useRouter } from 'vue-router';
 import { adminApi } from './api';
 import ConfirmDialog from './components/ConfirmDialog.vue';
 import ToastHost from './components/ToastHost.vue';
-import { adminState, askConfirm, refreshPending } from './state';
+import { adminState, askConfirm, refreshOrderBadge } from './state';
 
 const route = useRoute();
 const router = useRouter();
@@ -17,9 +17,9 @@ const links = [
 
 let timer: ReturnType<typeof setInterval> | undefined;
 onMounted(() => {
-  void refreshPending();
+  void refreshOrderBadge();
   timer = setInterval(() => {
-    if (document.visibilityState === 'visible') void refreshPending();
+    if (document.visibilityState === 'visible') void refreshOrderBadge();
   }, 30_000);
 });
 onBeforeUnmount(() => clearInterval(timer));
@@ -47,9 +47,9 @@ async function logout() {
           >
             {{ link.label }}
             <span
-              v-if="link.to === '/admin/orders' && adminState.pendingOrders > 0"
+              v-if="link.to === '/admin/orders' && adminState.ordersToHandle > 0"
               class="ml-1 inline-flex min-w-5 items-center justify-center rounded-full bg-amber-500 px-1.5 text-[11px] leading-5 font-bold text-white"
-            >{{ adminState.pendingOrders }}</span>
+            >{{ adminState.ordersToHandle }}</span>
           </RouterLink>
         </nav>
         <div class="flex shrink-0 items-center gap-1 text-sm">

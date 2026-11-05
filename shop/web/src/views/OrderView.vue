@@ -15,6 +15,8 @@ const phone = ref(rememberedPhone());
 const order = ref<BuyerOrder | null>(null);
 const error = ref('');
 const loading = ref(false);
+const paying = ref(false);
+const payError = ref('');
 let poller: ReturnType<typeof setInterval> | undefined;
 
 const wechat = computed(() => shopState.shop?.contact_wechat ?? '');
@@ -24,23 +26,41 @@ const banner = computed(() => {
     case 'pending':
       return {
         tone: 'bg-amber-50 text-amber-900 ring-amber-200',
-        title: '等待客服确认收款',
-        text: `付款后请添加客服微信 ${wechat.value}，发送付款截图和订单号。客服确认后，这里会显示你的卡密。`,
+        title: '等待付款',
+        text: '付款成功后点「我已付款」，卡密会马上显示在这里。',
       };
     case 'paid':
-      return { tone: 'bg-blue-50 text-blue-900 ring-blue-200', title: '已确认收款', text: '客服正在为你办理，大约 5 分钟完成。' };
+      return {
+        tone: 'bg-blue-50 text-blue-900 ring-blue-200',
+        title: '已付款',
+        text: `卡密已发放，请看下方卡密和使用说明。需要客服办理的，请添加客服微信 ${wechat.value}，发送付款截图和订单号。`,
+      };
     case 'completed':
       return { tone: 'bg-emerald-50 text-emerald-900 ring-emerald-200', title: '订单已完成', text: '感谢购买，有问题随时联系客服。' };
     case 'cancelled':
       return {
         tone: 'bg-slate-100 text-slate-700 ring-slate-200',
         title: '订单已取消',
-        text: '超过付款时间未确认收款，订单已自动取消。如果你已经付过款，请联系客服处理。',
+        text: '订单超过付款时间，或客服没有收到这笔款项，已取消。如果你已经付过款，请联系客服处理。',
       };
     default:
       return null;
   }
 });
+
+// The buyer's word is taken: the order turns paid and the cards show at once.
+async function markPaid() {
+  if (!order.value || paying.value) return;
+  paying.value = true;
+  payError.value = '';
+  try {
+    order.value = await api.markPaid(order.value.order_no, phone.value);
+  } catch (e) {
+    payError.value = errorMessage(e);
+  } finally {
+    paying.value = false;
+  }
+}
 
 async function load(withPhone = phone.value, quiet = false) {
   if (!withPhone) return;
@@ -90,9 +110,13 @@ const allCards = computed(() => order.value?.cards.join('\n') ?? '');
       <section v-if="banner" class="rounded-2xl p-4 ring-1 ring-inset" :class="banner.tone">
         <p class="font-semibold">{{ banner.title }}</p>
         <p class="mt-1 text-sm leading-6 opacity-90">{{ banner.text }}</p>
-        <RouterLink v-if="order.status === 'pending'" :to="`/pay/${order.order_no}`" class="btn-primary mt-3 h-10 text-sm">
-          还没付款？去付款
-        </RouterLink>
+        <div v-if="order.status === 'pending'" class="mt-3 flex flex-wrap gap-2">
+          <button type="button" class="btn-primary h-10 px-4 text-sm" :disabled="paying" @click="markPaid">
+            {{ paying ? '正在提交…' : '我已付款，查看卡密' }}
+          </button>
+          <RouterLink :to="`/pay/${order.order_no}`" class="btn-secondary h-10 px-4 text-sm">还没付款？去付款</RouterLink>
+        </div>
+        <p v-if="payError" class="mt-2 text-sm text-rose-600" role="alert">{{ payError }}</p>
       </section>
 
       <section class="card p-4 sm:p-5">
@@ -125,7 +149,7 @@ const allCards = computed(() => order.value?.cards.join('\n') ?? '');
             <dd class="text-slate-900">{{ formatTime(order.created_at) }}</dd>
           </div>
           <div v-if="order.paid_at" class="flex justify-between gap-3">
-            <dt class="text-slate-500">确认收款</dt>
+            <dt class="text-slate-500">付款时间</dt>
             <dd class="text-slate-900">{{ formatTime(order.paid_at) }}</dd>
           </div>
         </dl>
@@ -152,7 +176,7 @@ const allCards = computed(() => order.value?.cards.join('\n') ?? '');
         <HtmlContent :html="order.instructions" />
       </section>
 
-      <ContactCard>付款后请添加客服微信，发送「付款截图 + 订单号」；客服办理后刷新本页即可看到卡密。</ContactCard>
+      <ContactCard>需要客服办理或遇到问题，请添加客服微信，发送「付款截图 + 订单号」。</ContactCard>
     </template>
   </div>
 </template>

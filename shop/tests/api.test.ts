@@ -177,6 +177,42 @@ describe('looking up orders', () => {
   });
 });
 
+describe('buyer marks an order paid', () => {
+  const markPaid = (orderNo: string, phone = '13800138000') =>
+    app.inject({ method: 'POST', url: `/api/orders/${orderNo}/paid`, payload: { phone } });
+
+  it('shows the cards at once and is safe to repeat', async () => {
+    const placed = (await order({ product_id: ids.plus, quantity: 1, phone: '13800138000', pay_method: 'wechat' })).json();
+    expect((await markPaid(placed.order_no, '13900139000')).statusCode).toBe(404);
+    const paid = await markPaid(placed.order_no.toLowerCase());
+    expect(paid.statusCode).toBe(200);
+    expect(paid.json()).toMatchObject({ status: 'paid', cards: ['请联系微信客服'], instructions: '<p>how to use</p>', qr: null });
+    expect(paid.json().paid_at).toEqual(expect.any(String));
+    expect((await markPaid(placed.order_no)).json()).toMatchObject({ status: 'paid', paid_at: paid.json().paid_at });
+    expect(db.prepare('SELECT stock FROM products WHERE id = ?').get(ids.plus)).toEqual({ stock: 9 });
+  });
+
+  it('hands out pool cards, and leaves the order pending when the pool ran dry', async () => {
+    const first = (await order({ product_id: ids.pool, quantity: 1, phone: '13800138000', pay_method: 'wechat' })).json();
+    const second = (await order({ product_id: ids.pool, quantity: 1, phone: '13900139000', pay_method: 'wechat' })).json();
+    expect((await markPaid(first.order_no)).json().cards).toEqual(['CODE-1']);
+    db.prepare("DELETE FROM cards WHERE status = 'available'").run();
+    const refused = await markPaid(second.order_no, '13900139000');
+    expect(refused.statusCode).toBe(409);
+    expect(refused.json().error).toBe('卡密暂时不够，请联系客服处理');
+    expect(db.prepare('SELECT status FROM orders WHERE order_no = ?').get(second.order_no)).toEqual({ status: 'pending' });
+  });
+
+  it('refuses an order past its deadline', async () => {
+    const placed = (await order({ product_id: ids.plus, quantity: 1, phone: '13800138000', pay_method: 'wechat' })).json();
+    db.prepare('UPDATE orders SET expire_at = ? WHERE order_no = ?').run(new Date(Date.now() - 1000).toISOString(), placed.order_no);
+    const res = await markPaid(placed.order_no);
+    expect(res.statusCode).toBe(409);
+    expect(res.json().error).toMatch(/订单已取消/);
+    expect(db.prepare('SELECT stock FROM products WHERE id = ?').get(ids.plus)).toEqual({ stock: 10 });
+  });
+});
+
 describe('expiry', () => {
   it('cancels unpaid orders after the deadline and gives the stock back', async () => {
     const placed = (await order({ product_id: ids.gmail, quantity: 2, phone: '13800138000', pay_method: 'wechat' })).json();

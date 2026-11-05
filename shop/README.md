@@ -1,9 +1,11 @@
 # AIStudio365 shop
 
 A small shop: buyers pick a product, enter a phone number, pay with the owner's personal WeChat
-or Alipay QR code and contact customer service; the admin manages products, confirms payments
-and sees sales. Design: the development doc
-(https://claude.ai/artifact/RjSvQ4B2Q7egt5QpXMg4r7).
+or Alipay QR code and tap 「我已付款」. That is taken on trust, so their cards show at once; they
+then contact customer service. The admin manages products, works through paid orders (voiding
+any whose money never arrived) and sees sales. Design: the development doc
+(https://claude.ai/artifact/RjSvQ4B2Q7egt5QpXMg4r7); buyer-confirmed payment came later and
+replaces the doc's "customer service confirms first" step.
 
 Node.js 24 + TypeScript 6 + Fastify + SQLite (better-sqlite3); Vue 3 + Vite + Tailwind CSS 4.
 (TypeScript stays on 6 because vue-tsc does not support the TypeScript 7 native compiler yet.)

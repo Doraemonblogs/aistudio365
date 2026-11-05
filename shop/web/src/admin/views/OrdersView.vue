@@ -5,12 +5,13 @@ import CopyButton from '../../components/CopyButton.vue';
 import StatusBadge from '../../components/StatusBadge.vue';
 import { errorMessage, formatTime, PAY_TEXT, yuanExact } from '../../format';
 import { adminApi, type AdminOrder } from '../api';
-import { adminState, askConfirm, refreshPending, toast } from '../state';
+import { adminState, askConfirm, refreshOrderBadge, toast } from '../state';
 
 type Tab = OrderStatus | 'all';
+// Buyers mark their own orders paid, so the paid ones are what customer service works through.
 const TABS: { key: Tab; label: string }[] = [
-  { key: 'pending', label: '待付款' },
   { key: 'paid', label: '已付款' },
+  { key: 'pending', label: '待付款' },
   { key: 'completed', label: '已完成' },
   { key: 'cancelled', label: '已取消' },
   { key: 'all', label: '全部' },
@@ -18,7 +19,7 @@ const TABS: { key: Tab; label: string }[] = [
 const PAGE = 20;
 const vFocus = { mounted: (el: HTMLElement) => el.focus() };
 
-const tab = ref<Tab>('pending');
+const tab = ref<Tab>('paid');
 const q = ref('');
 const from = ref('');
 const to = ref('');
@@ -79,7 +80,7 @@ onBeforeUnmount(() => {
   clearTimeout(searchTimer);
 });
 watch(
-  () => adminState.pendingOrders,
+  () => adminState.ordersToHandle,
   (n) => {
     document.title = `${n > 0 ? `(${n}) ` : ''}订单 - 管理后台`;
   },
@@ -91,7 +92,7 @@ async function run(order: AdminOrder, action: () => Promise<AdminOrder>, done: s
   try {
     await action();
     toast(done);
-    await Promise.all([load(), refreshPending()]);
+    await Promise.all([load(), refreshOrderBadge()]);
   } catch (e) {
     toast(errorMessage(e), 'error');
   } finally {
@@ -115,9 +116,14 @@ async function complete(order: AdminOrder) {
 }
 
 async function cancel(order: AdminOrder) {
+  // Buyers mark orders paid themselves, so a paid order may have no money behind it.
+  const message =
+    order.status === 'paid'
+      ? `${PAY_TEXT[order.pay_method]}账单里没有收到订单 ${order.order_no} 的 ¥${yuanExact(order.amount)}？\n取消后库存会退回，买家看不到卡密。之后如果收到了钱，仍然可以在“已取消”里确认收款。`
+      : `取消订单 ${order.order_no}？库存会退回。买家如果之后付了款，仍然可以在“已取消”里确认收款。`;
   const ok = await askConfirm({
     title: '取消订单',
-    message: `取消订单 ${order.order_no}？库存会退回。买家如果之后付了款，仍然可以在“已取消”里确认收款。`,
+    message,
     confirmText: '取消订单',
     cancelText: '不取消',
     danger: true,
@@ -178,12 +184,12 @@ function clearFilters() {
     </div>
 
     <p v-if="!loading && items.length === 0" class="card p-10 text-center text-sm text-slate-500">
-      {{ hasFilters ? '没有符合条件的订单' : tab === 'pending' ? '没有待付款的订单' : '暂无订单' }}
+      {{ hasFilters ? '没有符合条件的订单' : tab === 'paid' ? '没有要办理的订单' : tab === 'pending' ? '没有待付款的订单' : '暂无订单' }}
     </p>
 
     <ul class="space-y-3">
       <li v-for="order in items" :key="order.id">
-        <article class="card p-4" :class="{ 'ring-2 ring-amber-300': order.status === 'pending' }">
+        <article class="card p-4" :class="{ 'ring-2 ring-amber-300': order.status === 'paid' }">
           <div class="flex flex-wrap items-center gap-x-2 gap-y-1">
             <span class="font-mono text-[15px] font-semibold tracking-wide text-slate-900">{{ order.order_no }}</span>
             <CopyButton :text="order.order_no" />
@@ -201,8 +207,8 @@ function clearFilters() {
               手机号 <span class="font-medium text-slate-900 tabular-nums">{{ order.phone }}</span>
               <CopyButton :text="order.phone" />
             </p>
-            <p v-if="order.paid_at" class="text-slate-500 sm:text-right">确认收款 {{ formatTime(order.paid_at) }}</p>
-            <p v-else-if="order.status === 'pending'" class="text-amber-700 sm:text-right">{{ formatTime(order.expire_at) }} 前未确认会自动取消</p>
+            <p v-if="order.paid_at" class="text-slate-500 sm:text-right">付款 {{ formatTime(order.paid_at) }}</p>
+            <p v-else-if="order.status === 'pending'" class="text-amber-700 sm:text-right">{{ formatTime(order.expire_at) }} 前未付款会自动取消</p>
             <p v-else-if="order.cancelled_at" class="text-slate-500 sm:text-right">取消于 {{ formatTime(order.cancelled_at) }}</p>
           </div>
 
@@ -234,7 +240,13 @@ function clearFilters() {
             <button v-if="order.status === 'paid'" type="button" class="btn-primary h-9 bg-emerald-600 px-4 text-sm hover:bg-emerald-700" :disabled="busyId === order.id" @click="complete(order)">
               标记完成
             </button>
-            <button v-if="order.status === 'pending'" type="button" class="btn-secondary h-9 px-4 text-sm" :disabled="busyId === order.id" @click="cancel(order)">
+            <button
+              v-if="order.status === 'pending' || order.status === 'paid'"
+              type="button"
+              class="btn-secondary h-9 px-4 text-sm"
+              :disabled="busyId === order.id"
+              @click="cancel(order)"
+            >
               取消订单
             </button>
             <button v-if="noteId !== order.id" type="button" class="btn-secondary h-9 px-4 text-sm" @click="editNote(order)">

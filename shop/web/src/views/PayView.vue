@@ -14,6 +14,8 @@ const phone = ref(rememberedPhone());
 const order = ref<BuyerOrder | null>(null);
 const error = ref('');
 const loading = ref(false);
+const paying = ref(false);
+const payError = ref('');
 const now = ref(Date.now());
 let ticker: ReturnType<typeof setInterval> | undefined;
 
@@ -43,6 +45,21 @@ async function load(withPhone = phone.value) {
     error.value = e instanceof ApiError && e.status === 404 ? '没有找到这个订单，请确认手机号是否正确' : errorMessage(e);
   } finally {
     loading.value = false;
+  }
+}
+
+// The buyer's word is taken: the order turns paid and its page shows the cards.
+async function markPaid() {
+  if (!order.value || paying.value) return;
+  paying.value = true;
+  payError.value = '';
+  try {
+    const result = await api.markPaid(order.value.order_no, phone.value);
+    await router.push(`/order/${result.order_no}`);
+  } catch (e) {
+    payError.value = errorMessage(e);
+  } finally {
+    paying.value = false;
   }
 }
 
@@ -90,7 +107,7 @@ onBeforeUnmount(() => clearInterval(ticker));
           <CopyButton :text="order.order_no" />
         </div>
         <p class="mt-3 text-xs text-slate-500">
-          请在 <span class="font-semibold text-amber-600 tabular-nums">{{ countdown }}</span> 内付款并联系客服，超时订单会自动取消
+          请在 <span class="font-semibold text-amber-600 tabular-nums">{{ countdown }}</span> 内付款并点「我已付款」，超时订单会自动取消
         </p>
       </section>
 
@@ -120,24 +137,23 @@ onBeforeUnmount(() => clearInterval(ticker));
           </li>
           <li class="flex gap-3">
             <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-blue-50 text-xs font-bold text-blue-600">2</span>
-            <span>截图付款成功页面</span>
+            <span>截图付款成功页面，再点下方「我已付款」，马上就能看到卡密</span>
           </li>
           <li class="flex gap-3">
             <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-blue-50 text-xs font-bold text-blue-600">3</span>
             <span class="flex flex-1 flex-wrap items-center justify-between gap-2">
-              <span>添加客服微信 <span class="font-semibold text-slate-900">{{ wechat }}</span>，发送「截图 + 订单号」</span>
+              <span>需要客服办理的，添加客服微信 <span class="font-semibold text-slate-900">{{ wechat }}</span>，发送「截图 + 订单号」</span>
               <CopyButton v-if="wechat" :text="wechat" label="复制微信号" />
             </span>
-          </li>
-          <li class="flex gap-3">
-            <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-blue-50 text-xs font-bold text-blue-600">4</span>
-            <span>客服核实到账后为你办理，大约 5 分钟</span>
           </li>
         </ol>
       </section>
 
       <div class="grid gap-3">
-        <RouterLink :to="`/order/${order.order_no}`" class="btn-primary h-12 text-base">我已付款，查看订单</RouterLink>
+        <button type="button" class="btn-primary h-12 text-base" :disabled="paying" @click="markPaid">
+          {{ paying ? '正在提交…' : '我已付款，查看卡密' }}
+        </button>
+        <p v-if="payError" class="text-center text-sm text-rose-600" role="alert">{{ payError }}</p>
         <RouterLink to="/" class="btn-secondary">返回首页</RouterLink>
       </div>
     </template>

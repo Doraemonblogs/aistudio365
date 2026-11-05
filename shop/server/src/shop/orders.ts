@@ -149,10 +149,10 @@ function requireOrder(db: DB, id: number): OrderRow {
 }
 
 /**
- * Customer service saw the money arrive: the order becomes paid and its cards are handed out.
- * Fixed-content products deliver their text; card-pool products take that many unsold cards.
- * Works on cancelled orders too (the buyer paid after the deadline); their released stock is
- * taken again, never below zero.
+ * The order becomes paid and its cards are handed out. Fixed-content products deliver their
+ * text; card-pool products take that many unsold cards. Customer service can also confirm a
+ * cancelled order (the buyer paid after the deadline); its released stock is taken again, never
+ * below zero.
  */
 export function confirmPayment(db: DB, id: number, now = nowIso()): OrderRow {
   return db.transaction(() => {
@@ -185,6 +185,22 @@ export function confirmPayment(db: DB, id: number, now = nowIso()): OrderRow {
   })();
 }
 
+/**
+ * The buyer says they have paid. It is taken on trust so the cards show at once; customer service
+ * can void the order with cancelOrder if the money never arrives. Repeating it is harmless.
+ */
+export function buyerConfirmPayment(db: DB, order: OrderRow, now = nowIso()): OrderRow {
+  if (order.status === 'paid' || order.status === 'completed') return order;
+  if (order.status !== 'pending') throw new AppError(409, '订单已取消。如果你已经付过款，请联系客服处理');
+  try {
+    return confirmPayment(db, order.id, now);
+  } catch (error) {
+    // Only a card pool that ran dry gets here; the buyer can't fix that, customer service can.
+    if (error instanceof AppError && error.statusCode === 409) throw new AppError(409, '卡密暂时不够，请联系客服处理');
+    throw error;
+  }
+}
+
 export function completeOrder(db: DB, id: number, now = nowIso()): OrderRow {
   const order = requireOrder(db, id);
   if (order.status !== 'paid') throw new AppError(409, '只有已付款的订单可以标记完成');
@@ -192,10 +208,20 @@ export function completeOrder(db: DB, id: number, now = nowIso()): OrderRow {
   return getOrder(db, id)!;
 }
 
+/**
+ * Cancels a pending order, or voids a paid one whose money never arrived (buyers mark orders paid
+ * themselves). Fixed-content stock goes back either way. Pool cards of a voided order stay sold:
+ * the buyer has already seen them.
+ */
 export function cancelOrder(db: DB, id: number, now = nowIso()): OrderRow {
   return db.transaction(() => {
     const order = requireOrder(db, id);
-    if (!cancelIfPending(db, order, now)) throw new AppError(409, '只有待付款的订单可以取消');
+    if (order.status === 'paid') {
+      db.prepare("UPDATE orders SET status = 'cancelled', cancelled_at = ?, paid_at = NULL WHERE id = ?").run(now, id);
+      releaseStock(db, order.product_id, order.quantity);
+    } else if (!cancelIfPending(db, order, now)) {
+      throw new AppError(409, '只有待付款或已付款的订单可以取消');
+    }
     return getOrder(db, id)!;
   })();
 }

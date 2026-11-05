@@ -368,7 +368,7 @@ const fieldClass = (key: keyof Form) => (errors.value[key] ? 'border-rose-400 fo
       <section class="card space-y-4 p-4 sm:p-5">
         <div>
           <h2 class="text-base font-semibold text-slate-900">卡密</h2>
-          <p class="mt-0.5 text-xs text-slate-500">客服确认收款后，买家在订单页看到的内容。</p>
+          <p class="mt-0.5 text-xs text-slate-500">买家点「我已付款」（或你在后台确认收款）后，在订单页看到的内容。</p>
         </div>
         <div class="grid gap-3 sm:grid-cols-2" role="radiogroup" aria-label="卡密方式">
           <button
