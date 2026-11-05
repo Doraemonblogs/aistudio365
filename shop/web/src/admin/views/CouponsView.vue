@@ -58,7 +58,10 @@ const filtered = computed(() => {
   return coupons.value.filter(
     (c) =>
       (tab.value === 'all' || c.state === tab.value) &&
-      (!term || c.code.includes(term) || c.name.toUpperCase().includes(term) || c.phone.includes(term)),
+      (!term ||
+        c.code.includes(term) ||
+        c.name.toUpperCase().includes(term) ||
+        Boolean(c.use && (c.use.phone.includes(term) || c.use.order_no.includes(term)))),
   );
 });
 const visible = computed(() => filtered.value.slice(0, shown.value));
@@ -74,9 +77,8 @@ function scope(c: AdminCoupon): string {
 }
 
 function usage(c: AdminCoupon): string {
-  const held = c.held ? `，${c.held} 笔待付款占用` : '';
-  if (c.max_uses === 0) return `已用 ${c.used} 次（不限次数）${held}`;
-  return `已用 ${c.used}/${c.max_uses}${held}`;
+  if (!c.use) return '未使用';
+  return c.use.status === 'pending' ? '待付款订单占用中' : '已使用';
 }
 
 // ---- batch ----
@@ -95,7 +97,7 @@ function toggleAll() {
 }
 
 async function copySelected() {
-  const ok = await copyText(selectedCoupons.value.map((c) => (c.phone ? `${c.code}\t${c.phone}` : c.code)).join('\n'));
+  const ok = await copyText(selectedCoupons.value.map((c) => c.code).join('\n'));
   toast(ok ? `已复制 ${selected.size} 个券码` : '复制失败，请手动选择', ok ? 'ok' : 'error');
 }
 
@@ -132,7 +134,7 @@ async function runBatch(action: 'enable' | 'disable' | 'delete') {
     <div class="flex flex-wrap items-end justify-between gap-3">
       <div>
         <h1 class="text-xl font-semibold text-stone-900">优惠券</h1>
-        <p class="mt-1 text-sm text-stone-500">生成券码发给客户，买家下单时填写券码或选择发给自己手机号的券。</p>
+        <p class="mt-1 text-sm text-stone-500">生成券码发给客户，买家下单时填写券码即可。每张券只能用一次，谁拿到都能用。</p>
       </div>
       <RouterLink to="/admin/marketing/new" class="btn-primary h-10 px-5 text-sm">新建优惠券</RouterLink>
     </div>
@@ -149,7 +151,7 @@ async function runBatch(action: 'enable' | 'disable' | 'delete') {
         {{ item.label }}
         <span class="ml-0.5 tabular-nums" :class="tab === item.key ? 'text-stone-300' : 'text-stone-400'">{{ counts[item.key] }}</span>
       </button>
-      <input v-model="q" type="search" placeholder="搜索券码、名称或手机号" class="input h-10 sm:ml-auto sm:max-w-xs" />
+      <input v-model="q" type="search" placeholder="搜索券码、名称、订单号或手机号" class="input h-10 sm:ml-auto sm:max-w-xs" />
     </div>
 
     <p v-if="loading && coupons.length === 0" class="card p-10 text-center text-sm text-stone-500">正在加载…</p>
@@ -199,23 +201,16 @@ async function runBatch(action: 'enable' | 'disable' | 'delete') {
                 <span class="ml-2 text-stone-500">{{ couponCondition(c) }} · {{ scope(c) }}</span>
               </p>
               <p class="text-stone-500 sm:text-right">{{ couponDates(c) }}</p>
-              <p class="text-stone-500">
-                <template v-if="c.phone">只给 <span class="font-medium text-stone-900 tabular-nums">{{ c.phone }}</span> 用</template>
-                <template v-else>任何人凭券码可用，每个手机号限一次</template>
-              </p>
-              <p class="sm:text-right" :class="c.used ? 'font-medium text-stone-900' : 'text-stone-500'">{{ usage(c) }}</p>
+              <p :class="c.use ? 'font-medium text-stone-900' : 'text-stone-500'">{{ usage(c) }}</p>
             </div>
 
-            <ul v-if="c.uses.length" class="mt-3 space-y-1.5 border-t border-stone-100 pt-3 text-sm">
-              <li v-for="use in c.uses.slice(0, 5)" :key="use.order_no" class="flex flex-wrap items-center gap-x-3 gap-y-1">
-                <span class="font-mono text-stone-800">{{ use.order_no }}</span>
-                <StatusBadge :status="use.status" />
-                <span class="text-stone-500 tabular-nums">{{ use.phone }}</span>
-                <span class="text-stone-500">实付 ¥{{ (use.amount / 100).toFixed(2) }}，优惠 ¥{{ (use.discount / 100).toFixed(2) }}</span>
-                <span class="ml-auto text-xs text-stone-400">{{ formatTime(use.created_at) }}</span>
-              </li>
-              <li v-if="c.uses.length > 5" class="text-xs text-stone-400">还有 {{ c.uses.length - 5 }} 笔，可以在订单页搜索</li>
-            </ul>
+            <div v-if="c.use" class="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-stone-100 pt-3 text-sm">
+              <span class="font-mono text-stone-800">{{ c.use.order_no }}</span>
+              <StatusBadge :status="c.use.status" />
+              <span class="text-stone-500 tabular-nums">{{ c.use.phone }}</span>
+              <span class="text-stone-500">实付 ¥{{ (c.use.amount / 100).toFixed(2) }}，优惠 ¥{{ (c.use.discount / 100).toFixed(2) }}</span>
+              <span class="ml-auto text-xs text-stone-400">{{ formatTime(c.use.created_at) }}</span>
+            </div>
           </article>
         </li>
       </ul>

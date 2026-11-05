@@ -121,4 +121,8 @@ export const migrations: readonly string[] = [
   ALTER TABLE orders ADD COLUMN discount INTEGER NOT NULL DEFAULT 0 CHECK (discount >= 0);
   CREATE INDEX idx_orders_coupon ON orders (coupon_id);
   `,
+  // v4: every coupon is a single-use code anyone may use; no more shared codes or phone binding.
+  `
+  UPDATE coupons SET max_uses = 1, phone = '';
+  `,
 ];

@@ -80,19 +80,17 @@ export interface BatchResult {
 
 export type CouponState = 'active' | 'scheduled' | 'used' | 'expired' | 'off';
 
+/** A single-use code. use: the order holding it (pending) or that used it (paid / completed). */
 export interface AdminCoupon extends CouponTerms {
   id: number;
   code: string;
-  phone: string;
-  max_uses: number;
   status: 'on' | 'off';
   created_at: string;
-  used: number;
-  held: number;
   state: CouponState;
-  uses: { order_no: string; phone: string; status: OrderStatus; amount: number; discount: number; created_at: string }[];
+  use: { order_no: string; phone: string; status: OrderStatus; amount: number; discount: number; created_at: string } | null;
 }
 
+/** count random codes (with an optional prefix), or one typed code. */
 export interface CouponInput {
   name: string;
   kind: CouponKind;
@@ -101,12 +99,9 @@ export interface CouponInput {
   product_ids: number[];
   starts_on: string | null;
   ends_on: string | null;
-  mode: 'code' | 'codes' | 'phones';
+  count: number;
   code?: string;
-  max_uses?: number;
-  count?: number;
   prefix?: string;
-  phones?: string[];
 }
 
 export interface OrderPage {

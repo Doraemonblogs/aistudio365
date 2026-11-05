@@ -5,6 +5,10 @@ import { nowIso } from '../time.js';
 
 export type CouponKind = 'amount' | 'rate';
 
+/**
+ * A coupon is a single-use code: whoever has it can use it, once. An order that is not cancelled
+ * holds it; if that order is cancelled or runs out of time, the code is free again.
+ */
 export interface CouponRow {
   id: number;
   code: string;
@@ -15,9 +19,8 @@ export interface CouponRow {
   min_amount: number;
   /** JSON array of product ids; empty means every product. */
   product_ids: string;
-  /** Only this phone may use it; '' means anyone who has the code. */
+  /** Left from v3 (phone-only and shared codes); always '' and 1 since v4. */
   phone: string;
-  /** 0 means unlimited. */
   max_uses: number;
   starts_at: string | null;
   ends_at: string | null;
@@ -66,14 +69,11 @@ export function findCoupon(db: DB, code: string): CouponRow | undefined {
   return db.prepare('SELECT * FROM coupons WHERE code = ?').get(normalizeCode(code)) as CouponRow | undefined;
 }
 
-function usesOf(db: DB, couponId: number): number {
-  return (db.prepare(`SELECT COUNT(*) AS n FROM orders WHERE coupon_id = ? AND ${HOLDING}`).get(couponId) as { n: number }).n;
-}
-
-function phoneUse(db: DB, couponId: number, phone: string) {
-  return db
-    .prepare(`SELECT order_no, status FROM orders WHERE coupon_id = ? AND phone = ? AND ${HOLDING} LIMIT 1`)
-    .get(couponId, phone) as { order_no: string; status: string } | undefined;
+/** The order holding this coupon, if any. */
+function holder(db: DB, couponId: number) {
+  return db.prepare(`SELECT order_no, status FROM orders WHERE coupon_id = ? AND ${HOLDING} LIMIT 1`).get(couponId) as
+    | { order_no: string; status: string }
+    | undefined;
 }
 
 export interface CouponQuote {
@@ -85,55 +85,25 @@ export interface CouponQuote {
 
 /**
  * Checks that a code can be used on this purchase and works out the discount. Messages are for the
- * buyer. Called again inside the order transaction, so two orders can't both take the last use.
+ * buyer. Called again inside the order transaction, so two orders can't both take the same code.
  */
-export function quoteCoupon(
-  db: DB,
-  rawCode: string,
-  input: { productId: number; subtotal: number; phone: string | null },
-  now = nowIso(),
-): CouponQuote {
+export function quoteCoupon(db: DB, rawCode: string, input: { productId: number; subtotal: number }, now = nowIso()): CouponQuote {
   const coupon = findCoupon(db, rawCode);
   if (!coupon || coupon.status !== 'on') throw new AppError(404, '优惠券不存在或已停用，请检查券码');
   if (coupon.starts_at && now < coupon.starts_at) throw new AppError(400, `这张优惠券 ${beijingDay(coupon.starts_at)} 起才能用`);
   if (coupon.ends_at && now >= coupon.ends_at) throw new AppError(400, '这张优惠券已过期');
-  if (coupon.phone && coupon.phone !== input.phone) {
-    throw new AppError(400, input.phone ? '这张优惠券是发给其他手机号的，这个手机号不能用' : '请先填写领券时的手机号');
-  }
   const products = couponProductIds(coupon);
   if (products.length > 0 && !products.includes(input.productId)) throw new AppError(400, '这张优惠券不能用于这个商品');
   if (input.subtotal < coupon.min_amount) throw new AppError(400, `满 ¥${yuan(coupon.min_amount)} 才能用这张优惠券`);
-  if (input.phone) {
-    const used = phoneUse(db, coupon.id, input.phone);
-    if (used) {
-      throw new AppError(
-        409,
-        used.status === 'pending'
-          ? `这张优惠券已用在你的待付款订单 ${used.order_no} 上，付款或等它取消后再说`
-          : '你已经用过这张优惠券了',
-      );
-    }
-  }
-  if (coupon.max_uses > 0 && usesOf(db, coupon.id) >= coupon.max_uses) {
-    throw new AppError(409, coupon.max_uses === 1 ? '这张优惠券已经被使用了' : '这张优惠券已经被领完了');
+  const used = holder(db, coupon.id);
+  if (used) {
+    throw new AppError(
+      409,
+      used.status === 'pending' ? '这张优惠券已用在一笔待付款订单上，那笔订单取消后才能再用' : '这张优惠券已经用过了',
+    );
   }
   const discount = couponDiscount(coupon, input.subtotal);
   return { coupon, subtotal: input.subtotal, discount, amount: input.subtotal - discount };
-}
-
-/** Coupons given to this phone that it can still use now, soonest to expire first. */
-export function couponsForPhone(db: DB, phone: string, now = nowIso()): CouponRow[] {
-  const rows = db
-    .prepare(
-      `SELECT * FROM coupons
-        WHERE phone = @phone AND status = 'on'
-          AND (starts_at IS NULL OR starts_at <= @now) AND (ends_at IS NULL OR ends_at > @now)
-        ORDER BY ends_at IS NULL, ends_at, id`,
-    )
-    .all({ phone, now }) as CouponRow[];
-  return rows.filter(
-    (coupon) => !phoneUse(db, coupon.id, phone) && (coupon.max_uses === 0 || usesOf(db, coupon.id) < coupon.max_uses),
-  );
 }
 
 export interface CouponTerms {
@@ -146,14 +116,8 @@ export interface CouponTerms {
   ends_at: string | null;
 }
 
-export interface CouponTarget {
-  code: string;
-  phone: string;
-  max_uses: number;
-}
-
-/** Creates one coupon per target, all on the same terms; any clash and none are created. */
-export function createCoupons(db: DB, terms: CouponTerms, targets: CouponTarget[]): CouponRow[] {
+/** Creates one single-use coupon per code, all on the same terms; any clash and none are created. */
+export function createCoupons(db: DB, terms: CouponTerms, codes: string[]): CouponRow[] {
   if (terms.kind === 'rate' && (terms.value < 1 || terms.value > 99)) throw new AppError(400, '折扣要在 0.1 折到 9.9 折之间');
   if (terms.kind === 'amount' && terms.value < 1) throw new AppError(400, '优惠金额要大于 0');
   if (terms.starts_at && terms.ends_at && terms.ends_at <= terms.starts_at) throw new AppError(400, '结束日期要晚于开始日期');
@@ -162,22 +126,15 @@ export function createCoupons(db: DB, terms: CouponTerms, targets: CouponTarget[
   }
   const insert = db.prepare(`
     INSERT INTO coupons (code, name, kind, value, min_amount, product_ids, phone, max_uses, starts_at, ends_at, created_at)
-    VALUES (@code, @name, @kind, @value, @min_amount, @product_ids, @phone, @max_uses, @starts_at, @ends_at, @now)`);
+    VALUES (@code, @name, @kind, @value, @min_amount, @product_ids, '', 1, @starts_at, @ends_at, @now)`);
   const now = nowIso();
   return db.transaction(() => {
     const created: CouponRow[] = [];
-    for (const target of targets) {
-      const code = normalizeCode(target.code);
+    for (const raw of codes) {
+      const code = normalizeCode(raw);
       if (!CODE_PATTERN.test(code)) throw new AppError(400, `券码 ${code || '（空）'} 只能用字母、数字、- 和 _，3 到 32 位`);
       if (findCoupon(db, code)) throw new AppError(409, `券码 ${code} 已经存在，换一个吧`);
-      const result = insert.run({
-        ...terms,
-        product_ids: JSON.stringify([...new Set(terms.product_ids)]),
-        code,
-        phone: target.phone,
-        max_uses: target.max_uses,
-        now,
-      });
+      const result = insert.run({ ...terms, product_ids: JSON.stringify([...new Set(terms.product_ids)]), code, now });
       created.push(db.prepare('SELECT * FROM coupons WHERE id = ?').get(Number(result.lastInsertRowid)) as CouponRow);
     }
     return created;
@@ -205,38 +162,33 @@ export interface CouponUse {
   created_at: string;
 }
 
-/** Every coupon, newest first, with how it has been used. */
+/** Every coupon, newest first, with the order that holds or used it. */
 export function listCoupons(db: DB, now = nowIso()) {
   const coupons = db.prepare('SELECT * FROM coupons ORDER BY id DESC LIMIT 5000').all() as CouponRow[];
-  const uses = new Map<number, CouponUse[]>();
+  const uses = new Map<number, CouponUse>();
   const rows = db
     .prepare(
       `SELECT coupon_id, order_no, phone, status, amount, discount, created_at FROM orders
         WHERE coupon_id IS NOT NULL AND ${HOLDING} ORDER BY created_at DESC`,
     )
     .all() as (CouponUse & { coupon_id: number })[];
-  for (const { coupon_id, ...use } of rows) {
-    const list = uses.get(coupon_id) ?? [];
-    list.push(use);
-    uses.set(coupon_id, list);
-  }
-  return coupons.map((coupon) => {
-    const own = uses.get(coupon.id) ?? [];
-    const used = own.filter((use) => use.status !== 'pending').length;
-    const held = own.length - used;
+  for (const { coupon_id, ...use } of rows) if (!uses.has(coupon_id)) uses.set(coupon_id, use);
+  return coupons.map(({ phone: _phone, max_uses: _maxUses, ...coupon }) => {
+    const use = uses.get(coupon.id) ?? null;
+    // A pending order only holds the code; it counts as used once paid.
     let state: CouponState = 'active';
     if (coupon.status === 'off') state = 'off';
-    else if (coupon.max_uses > 0 && used >= coupon.max_uses) state = 'used';
+    else if (use && use.status !== 'pending') state = 'used';
     else if (coupon.ends_at && now >= coupon.ends_at) state = 'expired';
     else if (coupon.starts_at && now < coupon.starts_at) state = 'scheduled';
-    return { ...coupon, product_ids: couponProductIds(coupon), used, held, state, uses: own.slice(0, 20) };
+    return { ...coupon, product_ids: couponProductIds(coupon), state, use };
   });
 }
 
-/** Coupons any order still holds can only be switched off, not deleted. */
+/** Coupons an order holds or used can only be switched off, not deleted. */
 export function deleteCoupon(db: DB, id: number): void {
   const coupon = db.prepare('SELECT code FROM coupons WHERE id = ?').get(id) as { code: string } | undefined;
   if (!coupon) throw new AppError(404, '优惠券不存在');
-  if (usesOf(db, id) > 0) throw new AppError(409, `券码 ${coupon.code} 已经用在订单上，不能删除，可以停用`);
+  if (holder(db, id)) throw new AppError(409, `券码 ${coupon.code} 已经用在订单上，不能删除，可以停用`);
   db.prepare('DELETE FROM coupons WHERE id = ?').run(id);
 }

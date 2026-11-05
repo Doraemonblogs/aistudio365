@@ -15,7 +15,7 @@ import {
   type PayMethod,
 } from '../shop/orders.js';
 import { availableStock, getProduct, listOnShelf, stockStatus, type ProductRow } from '../shop/products.js';
-import { couponProductIds, couponsForPhone, normalizeCode, quoteCoupon, type CouponRow } from '../shop/coupons.js';
+import { couponProductIds, normalizeCode, quoteCoupon, type CouponRow } from '../shop/coupons.js';
 
 /** The terms of a coupon, as a buyer sees them. */
 function buyerCoupon(c: CouponRow) {
@@ -137,7 +137,7 @@ export function registerPublicRoutes(app: FastifyInstance, db: DB): void {
     },
   );
 
-  // Whether a coupon code fits this purchase, and what it comes to.
+  // Whether a coupon code fits this purchase, and what it comes to. (phone is accepted but unused.)
   app.post<{ Body: { code: string; product_id: number; quantity: number; phone?: string } }>(
     '/api/coupons/check',
     {
@@ -164,19 +164,10 @@ export function registerPublicRoutes(app: FastifyInstance, db: DB): void {
       const quote = quoteCoupon(db, request.body.code, {
         productId: product.id,
         subtotal: product.price * request.body.quantity,
-        phone: normalizePhone(request.body.phone ?? ''),
       });
       return { ...buyerCoupon(quote.coupon), subtotal: quote.subtotal, discount: quote.discount, amount: quote.amount };
     },
   );
-
-  // Coupons customer service gave to this phone, so the buyer can pick one instead of typing it.
-  app.get<{ Querystring: { phone: string } }>('/api/coupons', { schema: { querystring: phoneQuery } }, async (request) => {
-    if (!lookupLimiter.allow(request.ip)) throw new AppError(429, '查询太频繁了，请稍后再试');
-    const phone = requirePhone(request.query.phone);
-    expireOrders(db);
-    return couponsForPhone(db, phone).map(buyerCoupon);
-  });
 
   app.post<{ Body: { product_id: number; quantity: number; phone: string; pay_method: PayMethod; coupon_code?: string } }>(
     '/api/orders',

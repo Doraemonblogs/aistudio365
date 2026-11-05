@@ -4,7 +4,7 @@ import path from 'node:path';
 import type { FastifyInstance, LightMyRequestResponse } from 'fastify';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { buildApp } from '../server/src/app.js';
-import { openDb, type DB } from '../server/src/db/index.js';
+import { migrate, openDb, type DB } from '../server/src/db/index.js';
 import { hashPassword } from '../server/src/passwords.js';
 import { updateSettings } from '../server/src/settings.js';
 import { expireOrders } from '../server/src/shop/orders.js';
@@ -35,12 +35,12 @@ const order = (extra: Record<string, unknown>) =>
   buyer('POST', '/api/orders', { product_id: plus, quantity: 1, phone: '13800138000', pay_method: 'alipay', ...extra });
 
 const createCoupons = async (body: Record<string, unknown>) => {
-  const res = await api('POST', '/api/admin/coupons', { kind: 'amount', value: 2000, mode: 'code', ...body });
+  const res = await api('POST', '/api/admin/coupons', { kind: 'amount', value: 2000, ...body });
   expect(res.statusCode, res.body).toBe(201);
   return res.json() as { created: number; ids: number[] };
 };
 
-type Listed = { id: number; code: string; phone: string; state: string; used: number; held: number; max_uses: number; uses: { order_no: string }[] };
+type Listed = { id: number; code: string; name: string; state: string; use: { order_no: string; status: string } | null };
 const coupons = async () => (await api('GET', '/api/admin/coupons')).json() as Listed[];
 
 const day = (offset: number) => new Date(Date.now() + 8 * 3_600_000 + offset * 86_400_000).toISOString().slice(0, 10);
@@ -113,43 +113,37 @@ describe('batch order actions', () => {
 });
 
 describe('creating coupons', () => {
-  it('makes one shared code, single-use codes, or one code per phone', async () => {
-    await createCoupons({ name: '双十一', code: 'double11', max_uses: 100 });
-    await createCoupons({ name: '一次性', mode: 'codes', count: 3, prefix: 'vip' });
-    await createCoupons({ name: '老客', mode: 'phones', phones: ['138 0013 8000', '+86 139-0013-9000', '13800138000'] });
+  it('makes one typed code or a batch of random single-use codes', async () => {
+    await createCoupons({ name: '双十一', code: 'double11' });
+    await createCoupons({ name: '一批', count: 3, prefix: 'vip' });
+    await createCoupons({ name: '随机' });
 
     const list = await coupons();
-    expect(list).toHaveLength(6);
-    expect(list.find((c) => c.code === 'DOUBLE11')).toMatchObject({ max_uses: 100, phone: '', state: 'active' });
+    expect(list).toHaveLength(5);
+    expect(list.find((c) => c.code === 'DOUBLE11')).toMatchObject({ name: '双十一', state: 'active', use: null });
     const vip = list.filter((c) => c.code.startsWith('VIP-'));
     expect(vip).toHaveLength(3);
-    expect(vip.every((c) => c.max_uses === 1 && /^VIP-[A-HJ-NP-Z2-9]{8}$/.test(c.code))).toBe(true);
-    // The repeated phone gets one coupon, not two.
-    expect(list.filter((c) => c.phone).map((c) => c.phone).sort()).toEqual(['13800138000', '13900139000']);
+    expect(vip.every((c) => /^VIP-[A-HJ-NP-Z2-9]{8}$/.test(c.code))).toBe(true);
+    expect(list.find((c) => c.name === '随机')!.code).toMatch(/^[A-HJ-NP-Z2-9]{8}$/);
   });
 
-  it('refuses a taken code, a bad phone, a bad rate and a backwards date range', async () => {
+  it('refuses a taken code, a typed code for a batch, a bad rate and a backwards date range', async () => {
     await createCoupons({ code: 'TAKEN' });
-    expect((await api('POST', '/api/admin/coupons', { kind: 'amount', value: 100, mode: 'code', code: 'taken' })).json().error).toMatch(
-      '已经存在',
-    );
-    expect(
-      (await api('POST', '/api/admin/coupons', { kind: 'amount', value: 100, mode: 'phones', phones: ['12345'] })).json().error,
-    ).toMatch('手机号不对');
-    expect((await api('POST', '/api/admin/coupons', { kind: 'rate', value: 100, mode: 'code' })).statusCode).toBe(400);
-    expect(
-      (await api('POST', '/api/admin/coupons', { kind: 'amount', value: 100, mode: 'code', starts_on: day(3), ends_on: day(1) })).json().error,
-    ).toMatch('结束日期');
+    const post = (body: Record<string, unknown>) => api('POST', '/api/admin/coupons', { kind: 'amount', value: 100, ...body });
+    expect((await post({ code: 'taken' })).json().error).toMatch('已经存在');
+    expect((await post({ code: 'MANY', count: 2 })).json().error).toMatch('只能建 1 张');
+    expect((await api('POST', '/api/admin/coupons', { kind: 'rate', value: 100 })).statusCode).toBe(400);
+    expect((await post({ starts_on: day(3), ends_on: day(1) })).json().error).toMatch('结束日期');
   });
 });
 
 describe('using coupons', () => {
   const check = (code: string, extra: Record<string, unknown> = {}) =>
-    buyer('POST', '/api/coupons/check', { code, product_id: plus, quantity: 1, phone: '13800138000', ...extra });
+    buyer('POST', '/api/coupons/check', { code, product_id: plus, quantity: 1, ...extra });
 
   it('takes a fixed amount or a rate off, and the order keeps the discount', async () => {
-    await createCoupons({ code: 'MINUS20', value: 2000, max_uses: 0 });
-    await createCoupons({ code: 'OFF85', kind: 'rate', value: 85, max_uses: 0 });
+    await createCoupons({ code: 'MINUS20', value: 2000 });
+    await createCoupons({ code: 'OFF85', kind: 'rate', value: 85 });
 
     expect((await check('minus20')).json()).toMatchObject({ code: 'MINUS20', subtotal: 12500, discount: 2000, amount: 10500 });
     expect((await check('OFF85', { quantity: 2 })).json()).toMatchObject({ subtotal: 25000, discount: 3750, amount: 21250 });
@@ -192,47 +186,37 @@ describe('using coupons', () => {
     expect(states).toMatchObject({ LATER: 'scheduled', GONE: 'expired', OFF: 'off', OVER200: 'active' });
   });
 
-  it('a phone coupon works only for its phone and shows up for it', async () => {
-    await createCoupons({ name: '老客', mode: 'phones', phones: ['13900139000'] });
-    const [coupon] = await coupons();
-    expect((await check(coupon!.code)).json().error).toMatch('发给其他手机号');
-    expect((await check(coupon!.code, { phone: undefined })).json().error).toMatch('请先填写');
-    expect((await check(coupon!.code, { phone: '13900139000' })).statusCode).toBe(200);
+  it('works for any phone, but only once: held by a pending order, freed if it is cancelled, spent once paid', async () => {
+    const { ids } = await createCoupons({ code: 'ONCE' });
 
-    const mine = (await buyer('GET', '/api/coupons?phone=13900139000')).json() as { code: string }[];
-    expect(mine.map((c) => c.code)).toEqual([coupon!.code]);
-    expect((await buyer('GET', '/api/coupons?phone=13800138000')).json()).toEqual([]);
-  });
+    const first = (await order({ coupon_code: 'ONCE', phone: '13800000001' })).json() as { order_no: string };
+    // Held: nobody else can take it, not even another phone.
+    expect((await check('ONCE')).json().error).toMatch('待付款订单');
+    expect((await order({ coupon_code: 'ONCE', phone: '13800000002' })).statusCode).toBe(409);
+    expect((await coupons())[0]).toMatchObject({ state: 'active', use: { order_no: first.order_no, status: 'pending' } });
 
-  it('a single-use code is held by a pending order, freed if it is cancelled, and spent once paid', async () => {
-    const { ids } = await createCoupons({ mode: 'codes', count: 1 });
-    const [{ code }] = (await coupons()) as [Listed];
-
-    const first = (await order({ coupon_code: code })).json() as { order_no: string };
-    expect((await check(code)).json().error).toMatch(`待付款订单 ${first.order_no}`);
-    expect((await check(code, { phone: '13900139000' })).json().error).toBe('这张优惠券已经被使用了');
-    expect((await coupons())[0]).toMatchObject({ held: 1, used: 0, state: 'active' });
-
-    // The order runs out of time: the code is free again.
+    // The order runs out of time: the code is free again, for anyone.
     db.prepare("UPDATE orders SET expire_at = '2000-01-01T00:00:00.000Z' WHERE order_no = ?").run(first.order_no);
     expireOrders(db);
-    expect((await check(code, { phone: '13900139000' })).statusCode).toBe(200);
+    const second = (await order({ coupon_code: 'ONCE', phone: '13800000002' })).json() as { order_no: string };
+    await buyer('POST', `/api/orders/${second.order_no}/paid`, { phone: '13800000002' });
 
-    const second = (await order({ coupon_code: code, phone: '13900139000' })).json() as { order_no: string };
-    await buyer('POST', `/api/orders/${second.order_no}/paid`, { phone: '13900139000' });
-    const [listed] = await coupons();
-    expect(listed).toMatchObject({ used: 1, held: 0, state: 'used', uses: [{ order_no: second.order_no }] });
+    expect((await coupons())[0]).toMatchObject({ state: 'used', use: { order_no: second.order_no, status: 'paid' } });
+    expect((await check('ONCE')).json().error).toBe('这张优惠券已经用过了');
+    expect((await order({ coupon_code: 'ONCE', phone: '13800000003' })).statusCode).toBe(409);
 
     // A used coupon can be switched off but not deleted.
     const res = await api('POST', '/api/admin/coupons/batch', { action: 'delete', ids });
     expect(res.json()).toMatchObject({ done: 0, failed: [{ error: expect.stringContaining('不能删除') }] });
   });
+});
 
-  it('lets each phone use a shared code once, up to its limit', async () => {
-    await createCoupons({ code: 'TWICE', max_uses: 2 });
-    expect((await order({ coupon_code: 'TWICE', phone: '13800000001' })).statusCode).toBe(201);
-    expect((await order({ coupon_code: 'TWICE', phone: '13800000001' })).json().error).toMatch('待付款订单');
-    expect((await order({ coupon_code: 'TWICE', phone: '13800000002' })).statusCode).toBe(201);
-    expect((await order({ coupon_code: 'TWICE', phone: '13800000003' })).json().error).toBe('这张优惠券已经被领完了');
+describe('the v4 migration', () => {
+  it('turns shared and phone-only coupons into single-use codes for anyone', async () => {
+    const { ids } = await createCoupons({ code: 'OLDSHARED' });
+    db.prepare("UPDATE coupons SET max_uses = 0, phone = '13900139000' WHERE id = ?").run(ids[0]);
+    db.pragma('user_version = 3');
+    migrate(db);
+    expect(db.prepare('SELECT max_uses, phone FROM coupons WHERE id = ?').get(ids[0])).toEqual({ max_uses: 1, phone: '' });
   });
 });

@@ -3,14 +3,9 @@ import { computed, onMounted, reactive, ref } from 'vue';
 import type { CouponKind } from '../../api';
 import { beijingDay, copyText, couponCondition, couponDates, couponText, errorMessage } from '../../format';
 import { adminApi, type AdminCoupon, type AdminProduct, type CouponInput } from '../api';
-import { toast } from '../state';
 
-type Mode = CouponInput['mode'];
-const MODES: { key: Mode; title: string; text: string }[] = [
-  { key: 'code', title: '通用券码', text: '一个券码，发到群里或朋友圈，谁拿到都能用，每个手机号限用一次。' },
-  { key: 'codes', title: '一次性券码', text: '生成一批券码，每个只能用一次，适合一对一私发给客户。' },
-  { key: 'phones', title: '发给指定手机号', text: '每个手机号一张，只有这个手机号能用；买家填手机号下单时会自动看到这张券。' },
-];
+// Every coupon is a single-use code anyone can use; a batch is just several of them.
+import { toast } from '../state';
 
 const KINDS = [
   { key: 'amount', text: '立减金额' },
@@ -31,13 +26,11 @@ const form = reactive({
   productIds: [] as number[],
   startsOn: today(),
   endsOn: daysFromToday(29),
-  mode: 'code' as Mode,
+  count: '1',
   code: '',
-  maxUses: '',
-  count: '10',
   prefix: '',
-  phones: '',
 });
+const count = computed(() => Number(form.count));
 
 const products = ref<AdminProduct[]>([]);
 const shopName = ref('');
@@ -57,7 +50,6 @@ onMounted(async () => {
 
 const cents = (yuan: string) => Math.round(Number(yuan) * 100);
 const value = computed(() => (form.kind === 'amount' ? cents(form.amount) : Math.round(Number(form.rate) * 10)));
-const phoneLines = computed(() => form.phones.split(/[\s,，;；]+/).map((p) => p.trim()).filter(Boolean));
 
 /** How the coupon will read to a buyer, while it is being filled in. */
 const preview = computed(() => {
@@ -86,8 +78,7 @@ function check(): string {
   if (form.minAmount && !(Number(form.minAmount) >= 0)) return '使用门槛金额不正确';
   if (!form.allProducts && form.productIds.length === 0) return '请至少选一个商品，或者改为全部商品';
   if (form.startsOn && form.endsOn && form.endsOn < form.startsOn) return '结束日期要晚于开始日期';
-  if (form.mode === 'codes' && !(Number(form.count) >= 1 && Number(form.count) <= 500)) return '生成数量请填 1 到 500';
-  if (form.mode === 'phones' && phoneLines.value.length === 0) return '请填写手机号，一行一个';
+  if (!(Number.isInteger(count.value) && count.value >= 1 && count.value <= 500)) return '张数请填 1 到 500';
   return '';
 }
 
@@ -104,17 +95,11 @@ async function submit() {
       product_ids: form.allProducts ? [] : form.productIds,
       starts_on: form.startsOn || null,
       ends_on: form.endsOn || null,
-      mode: form.mode,
-      prefix: form.prefix.trim() || undefined,
+      count: count.value,
+      // A typed code only makes sense for a single coupon; a batch gets random codes.
+      code: count.value === 1 ? form.code.trim() || undefined : undefined,
+      prefix: count.value > 1 ? form.prefix.trim() || undefined : undefined,
     };
-    if (form.mode === 'code') {
-      input.code = form.code.trim() || undefined;
-      input.max_uses = form.maxUses ? Number(form.maxUses) : 0;
-    } else if (form.mode === 'codes') {
-      input.count = Number(form.count);
-    } else {
-      input.phones = phoneLines.value;
-    }
     const result = await adminApi.createCoupons(input);
     const ids = new Set(result.ids);
     created.value = (await adminApi.coupons()).filter((c) => ids.has(c.id));
@@ -132,15 +117,11 @@ function message(c: AdminCoupon): string {
   const terms = `${couponText(c)}（${couponCondition(c)}，${couponDates(c)}）`;
   const shop = shopName.value || '本店';
   const link = window.location.origin;
-  return c.phone
-    ? `【${shop}】送你一张优惠券：${terms}。用手机号 ${c.phone} 下单时会自动出现，也可以填券码 ${c.code}。下单地址：${link}`
-    : `【${shop}】送你一张优惠券：${terms}。下单时填写券码 ${c.code} 即可。下单地址：${link}`;
+  return `【${shop}】送你一张优惠券：${terms}。下单时填写券码 ${c.code} 即可，限用一次。下单地址：${link}`;
 }
 
 async function copyAll(kind: 'codes' | 'messages') {
-  const text = created.value
-    .map((c) => (kind === 'messages' ? message(c) : c.phone ? `${c.code}\t${c.phone}` : c.code))
-    .join(kind === 'messages' ? '\n\n' : '\n');
+  const text = created.value.map((c) => (kind === 'messages' ? message(c) : c.code)).join(kind === 'messages' ? '\n\n' : '\n');
   const ok = await copyText(text);
   toast(ok ? '已复制' : '复制失败，请手动选择', ok ? 'ok' : 'error');
 }
@@ -148,7 +129,6 @@ async function copyAll(kind: 'codes' | 'messages') {
 function another() {
   created.value = [];
   form.code = '';
-  form.phones = '';
 }
 </script>
 
@@ -174,7 +154,7 @@ function another() {
       <ul class="max-h-80 divide-y divide-stone-100 overflow-y-auto rounded-2xl bg-stone-50 px-4">
         <li v-for="c in created" :key="c.id" class="flex items-center justify-between gap-3 py-2.5 text-sm">
           <span class="font-mono font-semibold text-stone-900">{{ c.code }}</span>
-          <span class="text-stone-500 tabular-nums">{{ c.phone || (c.max_uses ? `可用 ${c.max_uses} 次` : '不限次数') }}</span>
+          <span class="text-stone-400">限用一次</span>
         </li>
       </ul>
       <p class="rounded-2xl bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-800">
@@ -192,7 +172,7 @@ function another() {
 
         <div>
           <label for="coupon-name" class="label">名称 <span class="text-stone-400">选填</span></label>
-          <input id="coupon-name" v-model="form.name" class="input" maxlength="40" placeholder="比如：双十一、老客回馈（买家也能看到）" />
+          <input id="coupon-name" v-model="form.name" class="input" maxlength="40" placeholder="比如：双十一、老客回馈（只在后台显示）" />
         </div>
 
         <div>
@@ -263,52 +243,23 @@ function another() {
       </section>
 
       <section class="card space-y-4 p-5">
-        <h2 class="text-base font-semibold text-stone-900">怎么发</h2>
-        <div class="grid gap-2 sm:grid-cols-3">
-          <button
-            v-for="mode in MODES"
-            :key="mode.key"
-            type="button"
-            class="rounded-2xl p-3.5 text-left transition"
-            :class="form.mode === mode.key ? 'bg-white ring-2 ring-stone-900' : 'bg-stone-100 hover:bg-stone-200/70'"
-            @click="form.mode = mode.key"
-          >
-            <span class="block text-sm font-semibold text-stone-900">{{ mode.title }}</span>
-            <span class="mt-1 block text-xs leading-5 text-stone-500">{{ mode.text }}</span>
-          </button>
+        <div>
+          <h2 class="text-base font-semibold text-stone-900">券码</h2>
+          <p class="mt-1 text-sm text-stone-500">每张券只能用一次，谁拿到都能用。要发给几个人就生成几张。</p>
         </div>
-
-        <div v-if="form.mode === 'code'" class="grid gap-4 sm:grid-cols-2">
+        <div class="grid gap-4 sm:grid-cols-2">
           <div>
+            <label for="coupon-count" class="label">生成几张</label>
+            <input id="coupon-count" v-model="form.count" type="number" min="1" max="500" step="1" class="input" />
+          </div>
+          <div v-if="count === 1">
             <label for="coupon-code" class="label">券码 <span class="text-stone-400">留空自动生成</span></label>
             <input id="coupon-code" v-model="form.code" class="input font-mono uppercase" maxlength="32" placeholder="比如 DOUBLE11" />
           </div>
-          <div>
-            <label for="coupon-max" class="label">总共能用几次 <span class="text-stone-400">留空不限</span></label>
-            <input id="coupon-max" v-model="form.maxUses" type="number" min="1" step="1" class="input" placeholder="不限" />
-          </div>
-        </div>
-
-        <div v-else-if="form.mode === 'codes'" class="grid gap-4 sm:grid-cols-2">
-          <div>
-            <label for="coupon-count" class="label">生成几个</label>
-            <input id="coupon-count" v-model="form.count" type="number" min="1" max="500" step="1" class="input" />
-          </div>
-          <div>
+          <div v-else>
             <label for="coupon-prefix" class="label">券码前缀 <span class="text-stone-400">选填</span></label>
             <input id="coupon-prefix" v-model="form.prefix" class="input font-mono uppercase" maxlength="10" placeholder="比如 VIP" />
           </div>
-        </div>
-
-        <div v-else>
-          <label for="coupon-phones" class="label">手机号 <span class="text-stone-400">一行一个，已填 {{ phoneLines.length }} 个</span></label>
-          <textarea
-            id="coupon-phones"
-            v-model="form.phones"
-            rows="5"
-            class="input h-auto py-3 font-mono leading-6"
-            placeholder="13800138000&#10;13900139000"
-          />
         </div>
       </section>
 

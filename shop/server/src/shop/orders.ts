@@ -83,7 +83,7 @@ export function createOrder(db: DB, input: CreateOrderInput, timeoutMinutes: num
 
     const subtotal = product.price * input.quantity;
     const quote = input.couponCode?.trim()
-      ? quoteCoupon(db, input.couponCode, { productId: product.id, subtotal, phone: input.phone })
+      ? quoteCoupon(db, input.couponCode, { productId: product.id, subtotal })
       : null;
 
     if (product.card_mode === 'fixed' && product.stock >= 0) {

@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { api, type BuyerCoupon, type CouponQuote, type PayMethod, type ProductDetail } from '../api';
+import { api, type CouponQuote, type PayMethod, type ProductDetail } from '../api';
 import HtmlContent from '../components/HtmlContent.vue';
 import PriceTag from '../components/PriceTag.vue';
 import StockBadge from '../components/StockBadge.vue';
-import { couponText, errorMessage, normalizePhone, rememberedPhone, rememberPhone, setTitle, yuanShort } from '../format';
+import { errorMessage, normalizePhone, rememberedPhone, rememberPhone, setTitle, yuanShort } from '../format';
 import { shopState } from '../shop';
 
 /**
@@ -36,17 +36,13 @@ const methods = [
   { key: 'alipay', label: '支付宝', dot: 'bg-alipay', ring: 'ring-alipay' },
 ] as const;
 
-// ---- coupon: typed (or picked) codes are checked on their own; a valid one just lowers the total ----
+// ---- coupon: a typed code is checked on its own; a valid one just lowers the total ----
 const couponInput = ref('');
 const coupon = ref<CouponQuote | null>(null);
 const couponError = ref('');
 const checkingCoupon = ref(false);
-const myCoupons = ref<BuyerCoupon[]>([]);
 const typedCode = computed(() => couponInput.value.trim().toUpperCase());
 
-const usableMine = computed(() =>
-  myCoupons.value.filter((c) => c.product_ids.length === 0 || c.product_ids.includes(product.value?.id ?? 0)),
-);
 // Worked out here so the total follows the quantity at once; the server checks it again on order.
 const discount = computed(() => {
   const c = coupon.value;
@@ -66,12 +62,7 @@ async function checkCoupon(): Promise<boolean> {
   const mine = ++ticket;
   checkingCoupon.value = true;
   try {
-    const quote = await api.checkCoupon({
-      code,
-      product_id: product.value.id,
-      quantity: quantity.value,
-      phone: validPhone.value ?? undefined,
-    });
+    const quote = await api.checkCoupon({ code, product_id: product.value.id, quantity: quantity.value });
     if (mine !== ticket) return false;
     coupon.value = quote;
     couponError.value = '';
@@ -98,16 +89,8 @@ watch(couponInput, () => {
   if (!typedCode.value) coupon.value = null;
   checkSoon(500);
 });
-// A threshold or a phone-only coupon may stop fitting when the quantity or phone changes.
-watch([quantity, validPhone], () => checkSoon(300));
-
-watch(
-  validPhone,
-  async (p) => {
-    myCoupons.value = p ? await api.myCoupons(p).catch(() => []) : [];
-  },
-  { immediate: true },
-);
+// A minimum spend may stop (or start) fitting when the quantity changes.
+watch(quantity, () => checkSoon(300));
 
 watch(
   () => props.id,
@@ -319,16 +302,6 @@ onBeforeUnmount(() => {
                   @blur="checkCoupon"
                 />
                 <p v-if="couponError" class="mt-1.5 text-xs text-rose-600" role="alert">{{ couponError }}</p>
-                <div v-else-if="usableMine.length && !typedCode" class="mt-2 flex flex-wrap items-center gap-2 text-xs">
-                  <span class="text-stone-400">你有可用的券</span>
-                  <button
-                    v-for="c in usableMine"
-                    :key="c.code"
-                    type="button"
-                    class="rounded-full bg-accent/10 px-2.5 py-1 font-medium text-accent transition hover:bg-accent/15"
-                    @click="couponInput = c.code"
-                  >{{ couponText(c) }}</button>
-                </div>
               </div>
 
               <p v-if="formError" class="rounded-2xl bg-rose-50 px-4 py-2.5 text-sm text-rose-700" role="alert">{{ formError }}</p>

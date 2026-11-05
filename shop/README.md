@@ -8,16 +8,16 @@ any whose money never arrived) and sees sales. Design: the development doc
 replaces the doc's "customer service confirms first" step.
 
 Orders can be handled in bulk: tick them in the admin list and confirm, complete, cancel or (once
-cancelled) delete them together. Marketing (营销) makes coupons: a fixed amount off or a discount
-rate, an optional threshold, all or chosen products, a Beijing date range, and one of three ways
-to hand them out:
-- one shared code, optionally with a use limit;
-- a batch of single-use codes;
-- one code per phone number. The buyer sees these automatically after typing that number.
+cancelled) delete them together. Marketing (营销) makes coupons. Each coupon has:
+- a fixed amount off or a discount rate
+- an optional minimum spend
+- all products or chosen ones
+- a Beijing date range
 
-Each phone uses a coupon once. A pending order holds its coupon until the order is paid or
-cancelled. A discounted order always pays with the general QR code, because a product's
-fixed-amount code would charge the full price.
+Every coupon is a single-use code that anyone may use; it is not tied to a phone number. You can
+make one code, typed or random, or a batch of random ones. A pending order holds its code until
+the order is paid or cancelled. A discounted order always pays with the general QR code, because
+a product's fixed-amount code would charge the full price.
 
 Node.js 24 + TypeScript 6 + Fastify + SQLite (better-sqlite3); Vue 3 + Vite + Tailwind CSS 4.
 (TypeScript stays on 6 because vue-tsc does not support the TypeScript 7 native compiler yet.)

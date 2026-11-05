@@ -122,9 +122,8 @@ export const api = {
   product: (id: number) => request<ProductDetail>(`/api/products/${id}`),
   createOrder: (input: { product_id: number; quantity: number; phone: string; pay_method: PayMethod; coupon_code?: string }) =>
     request<BuyerOrder>('/api/orders', { method: 'POST', body: JSON.stringify(input) }),
-  checkCoupon: (input: { code: string; product_id: number; quantity: number; phone?: string }) =>
+  checkCoupon: (input: { code: string; product_id: number; quantity: number }) =>
     request<CouponQuote>('/api/coupons/check', { method: 'POST', body: JSON.stringify(input) }),
-  myCoupons: (phone: string) => request<BuyerCoupon[]>(`/api/coupons?phone=${q(phone)}`),
   order: (orderNo: string, phone: string) => request<BuyerOrder>(`/api/orders/${q(orderNo)}?phone=${q(phone)}`),
   orders: (phone: string) => request<OrderListItem[]>(`/api/orders?phone=${q(phone)}`),
   markPaid: (orderNo: string, phone: string) =>
