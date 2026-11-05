@@ -11,6 +11,7 @@ shop/data/
 
 # Local copies of the personal payment QR codes; kept out of git. The live shop serves its own
 # copies from shop/data/uploads on the server.
-cashier/qr/*.png
-cashier/qr/*.jpg
-cashier/qr/*.webp
+cashier/qr/**/*.png
+cashier/qr/**/*.jpg
+cashier/qr/**/*.jpeg
+cashier/qr/**/*.webp
